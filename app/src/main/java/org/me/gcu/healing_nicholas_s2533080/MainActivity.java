@@ -146,6 +146,10 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
                 boolean insideFrom = false;
                 boolean insideTo = false;
 
+                // True while reading a <name> or <ilc> element inside a location
+                boolean insideRoadName = false;
+                // Temporarily holds a possible road name until we know its descriptor type
+                String tempRoadName = null;
 
                 // Find out what event the parser is currently on
                 int eventType = xpp.getEventType();
@@ -349,8 +353,63 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
                             }
                         }
 
-                        // END_TAG means the parser has reach an end tag like </situationRecord>
-                    } else if (eventType == XmlPullParser.END_TAG) {
+                        else if ((xpp.getName().equalsIgnoreCase("name")
+                                || xpp.getName().equalsIgnoreCase("ilc"))
+                                && currentSituation != null
+                                && currentSituation.getLocation() != null
+                                && (insideFrom || insideTo)
+                                && insideGroupOfLocations) {
+
+                            // Entered inside an section which might contain a possible road name
+                            insideRoadName = true;
+
+                            // Clearing any temp names from the previous element
+                            tempRoadName = null;
+
+                        }
+
+                        else if (xpp.getName().equalsIgnoreCase("value")
+                                && insideRoadName
+                                && currentSituation != null) {
+
+                            // Reading the text inside the <value> tag
+                            String possibleName = xpp.nextText();
+
+                            // Holding the name until we can confirm what kind of name it is
+                            tempRoadName = possibleName;
+                        }
+
+                        else if ((xpp.getName().equalsIgnoreCase("tpegIlcPointDescriptorType")
+                                || xpp.getName().equalsIgnoreCase("tpegOtherPointDescriptorType"))
+                                && currentSituation != null
+                                && insideRoadName
+                                && currentSituation.getLocation() != null) {
+
+                            // Checking what kind of road name we read earlier
+                            String  descriptorType = xpp.nextText();
+
+                            // Only storing names that are identified as primary road or link names
+                            if (descriptorType.equalsIgnoreCase("tpegIlcName1")
+                                    || descriptorType.equalsIgnoreCase("linkName")) {
+
+                                // Checking that a name was found and isn't empty
+                                if (tempRoadName != null
+                                        && !tempRoadName.trim().isEmpty()) {
+
+                                    // Only setting the name if we haven't set one already
+                                    if (currentSituation.getLocation().getRoadName() == null) {
+
+                                        currentSituation.getLocation().setRoadName(tempRoadName);
+
+                                        Log.d("Parsing", "Road name: " + tempRoadName);
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // END_TAG meaning the parser has reach an end tag like </situationRecord>
+                    else if (eventType == XmlPullParser.END_TAG) {
 
                         // We've left the generalPublicComment section
                         if (xpp.getName().equalsIgnoreCase("generalPublicComment")) {
@@ -399,6 +458,16 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
                             // get a chance to turn them off
                             insideFrom = false;
                             insideTo = false;
+                        }
+
+                        else if (xpp.getName().equalsIgnoreCase("name")
+                                || xpp.getName().equalsIgnoreCase("ilc")) {
+
+                            // Finished reading the possible road name section
+                            insideRoadName = false;
+
+                            // Clear its temporary text
+                            tempRoadName = null;
                         }
                     }
 
