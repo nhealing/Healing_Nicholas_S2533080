@@ -139,6 +139,14 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
                 // True while PullParser is inside the <impact> section
                 boolean insideImpact = false;
 
+                // True while we are reading the location section
+                boolean insideGroupOfLocations = false;
+
+                // Tracking whether we are in From or To coordinate section
+                boolean insideFrom = false;
+                boolean insideTo = false;
+
+
                 // Find out what event the parser is currently on
                 int eventType = xpp.getEventType();
 
@@ -241,6 +249,8 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
                                 && currentSituation != null) {
 
                             // Entered the location section of this Situation
+                            insideGroupOfLocations = true;
+
                             // Creating a TrafficLocation object to hold its location details
                             currentSituation.setLocation(new TrafficLocation());
                         }
@@ -256,6 +266,87 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
                             currentSituation.getLocation().setDirection(direction);
 
                             Log.d("Parsing", "Direction: " + direction);
+                        }
+
+                        else if (xpp.getName().equalsIgnoreCase("from")
+                                && insideGroupOfLocations) {
+
+                            // Now entered into the location starting point
+                            insideFrom = true;
+                        }
+
+                        else if (xpp.getName().equalsIgnoreCase("to")
+                                && insideGroupOfLocations) {
+
+                            // Now entered into the location end point section
+                            insideTo = true;
+                        }
+
+                        else if (xpp.getName().equalsIgnoreCase("latitude")
+                                && insideGroupOfLocations
+                                && (insideFrom || insideTo)
+                                && currentSituation != null
+                                && currentSituation.getLocation() != null) {
+
+                            // Reading the latitude text from the XML
+                            String latitudeText = xpp.nextText();
+
+                            try {
+                                // Converting the text to a number
+                                double latitude = Double.parseDouble(latitudeText);
+
+                                if (insideFrom) {
+
+                                    // Storing the latitude for the starting point
+                                    currentSituation.getLocation().setFromLatitude(latitude);
+
+                                    Log.d("Parsing", "From latitude: " + latitude);
+                                } else if (insideTo) {
+
+                                    // Storing the latitude for the end point
+                                    currentSituation.getLocation().setToLatitude(latitude);
+
+                                    Log.d("Parsing", "To latitude: " + latitude);
+                                }
+                            } catch (NumberFormatException e) {
+
+                                // If the XML contains an invalid number, don't crash the app
+                                Log.w("Parsing", "Invalid latitude: " + latitudeText);
+                            }
+                        }
+
+                        else if (xpp.getName().equalsIgnoreCase("longitude")
+                                && insideGroupOfLocations
+                                && currentSituation != null
+                                && (insideFrom || insideTo)
+                                && currentSituation.getLocation() != null) {
+
+                            // Reading the longitude from the XML
+                            String longitudeText = xpp.nextText();
+
+                            try {
+                                // Converting the longitude text into a double
+                                double longitude = Double.parseDouble(longitudeText);
+
+                                if (insideFrom) {
+
+                                    // Setting the longitude starting point
+                                    currentSituation.getLocation().setFromLongitude(longitude);
+
+                                    Log.d("Parsing", "From longitude: " + longitude);
+                                }
+                                else if (insideTo) {
+
+                                    // Setting the longitude end point
+                                    currentSituation.getLocation().setToLongitude(longitude);
+
+                                    Log.d("Parsing", "To longitude: " + longitude);
+                                }
+                            } catch (NumberFormatException e) {
+
+                                // Log a warning in case a value is not a number
+                                Log.w("Parsing", "Invalid longitude: " + longitudeText);
+                            }
                         }
 
                         // END_TAG means the parser has reach an end tag like </situationRecord>
@@ -285,6 +376,29 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
 
                             // Finished reading the impact section
                             insideImpact = false;
+                        }
+
+                        else if (xpp.getName().equalsIgnoreCase("from")) {
+
+                            // Setting from boolean to false as we've finished reading the starting point
+                            insideFrom = false;
+                        }
+
+                        else if (xpp.getName().equalsIgnoreCase("to")) {
+
+                            // Setting the to boolean to false as we've finished reading the end point
+                            insideTo = false;
+                        }
+
+                        else if (xpp.getName().equalsIgnoreCase("groupOfLocations")) {
+
+                            // Finished reading the location information
+                            insideGroupOfLocations = false;
+
+                            // Setting from and to also to false incase locations end tag before we
+                            // get a chance to turn them off
+                            insideFrom = false;
+                            insideTo = false;
                         }
                     }
 
