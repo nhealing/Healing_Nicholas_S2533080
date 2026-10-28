@@ -36,11 +36,16 @@ import java.util.Base64;
 public class MainActivity extends AppCompatActivity implements OnClickListener {
     private TextView rawDataDisplay;
     private Button startButton;
+    private Button roadworksButton;
 
     //DOWNLOADING FROM TRAFFIC SCOTLAND
     final String clientId = BuildConfig.TRAFFIC_CLIENT_ID;
     final String clientKey = BuildConfig.TRAFFIC_CLIENT_KEY;
+
+    // URL for the Traffic Scotland Unplanned Events XML feed
     final String unplannedEventsURL = "https://datex2.trafficscotland.org/rest/2.3/publications/UnplannedEvents/Content.xml";
+    // URL for the Traffic Scotland Current Roadworks XML feed
+    final String currentRoadworksURL = "https://datex2.trafficscotland.org/rest/2.3/publications/CurrentRoadworks/Content.xml";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -56,6 +61,9 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
         rawDataDisplay = (TextView)findViewById(R.id.rawDataDisplay);
         startButton = (Button)findViewById(R.id.startButton);
         startButton.setOnClickListener(this);
+        // Connecting to Current Roadworks button in xml file
+        roadworksButton = findViewById(R.id.roadworksButton);
+        roadworksButton.setOnClickListener(this);
 
         // More Code goes here
 
@@ -63,13 +71,26 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
 
     public void onClick(View aview)
     {
-        startProgress();
+        // Checking if the Unplanned Events button was clicked
+        if (aview.getId() == R.id.startButton) {
+
+            // Passing the Unplanned Events startProgress() to be parsed
+            startProgress(unplannedEventsURL);
+        }
+
+        // Checking if Current Roadworks button was clicked
+        if (aview.getId() == R.id.roadworksButton) {
+
+            // Passing Current Roadworks to startProgress() to be parsed
+            startProgress(currentRoadworksURL);
+        }
     }
 
-    public void startProgress()
+    // Updated so url String can be passed in depending on which button was clicked
+    public void startProgress(String url)
     {
-        // Run network access on a separate thread;
-        new Thread(new Task(unplannedEventsURL)).start();
+        // Run network access on a separate thread using whichever URL was passed in
+        new Thread(new Task(url)).start();
     } //
 
     // Need separate thread to access the internet resource over network
