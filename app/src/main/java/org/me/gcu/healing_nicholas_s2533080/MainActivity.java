@@ -237,6 +237,19 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
                             Log.d("Parsing", "Start time: " + startTime);
                         }
 
+                        else if (xpp.getName().equalsIgnoreCase("overallEndTime")
+                                && currentSituation != null) {
+
+                            //Reading the text inside overEndTime XML tags
+                            String endTime = xpp.nextText();
+
+                            // Saving the extracted end time in the Situation object
+                            currentSituation.setOverallEndTime(endTime);
+
+                            // Checking the value that was extracted with LogCat
+                            Log.d("Parsing", "End time: " + endTime);
+                        }
+
                         else if (xpp.getName().equalsIgnoreCase("impact")
                                 && currentSituation != null) {
 
@@ -268,6 +281,20 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
                             currentSituation.setNumberOfOperationalLanes(operationLanes);
 
                             Log.d("Parsing", "Operational lanes: " + operationLanes);
+                        }
+
+                        else if (xpp.getName().equalsIgnoreCase("delaysType")
+                                && insideImpact
+                                && currentSituation != null) {
+
+                            // Reading and storing delay category from the XML
+                            String delayType = xpp.nextText();
+
+                            // Storing the delay category in the current Situation
+                            currentSituation.setDelaysType(delayType);
+
+                            // Displaying extracted delay type with LogCat
+                            Log.d("Parsing", "Delay type: " + delayType);
                         }
 
                         else if (xpp.getName().equalsIgnoreCase("groupOfLocations")

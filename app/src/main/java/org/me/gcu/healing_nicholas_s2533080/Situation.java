@@ -16,6 +16,27 @@ public class Situation {
     // Location and information belonging to this traffic situation
     private TrafficLocation location;
 
+    // Storing the time the situation is expected to finish
+    private String overallEndTime;
+    // Storing the expected delay category for a situation
+    private String delaysType;
+
+    public String getOverallEndTime() {
+        return overallEndTime;
+    }
+
+    public void setOverallEndTime(String overallEndTime) {
+        this.overallEndTime = overallEndTime;
+    }
+
+    public String getDelaysType() {
+        return delaysType;
+    }
+
+    public void setDelaysType(String delaysType) {
+        this.delaysType = delaysType;
+    }
+
     public String getId() {
         return id;
     }
@@ -72,6 +93,8 @@ public class Situation {
         this.location = location;
     }
 
+    //Including all attributes in the toString() so i can check they're being extracted properly with LogCat
+
     @Override
     public String toString() {
         return "Situation{" +
@@ -82,6 +105,8 @@ public class Situation {
                 ", numberOfLanesRestricted='" + numberOfLanesRestricted + '\'' +
                 ", numberOfOperationalLanes='" + numberOfOperationalLanes + '\'' +
                 ", location=" + location +
+                ", overallEndTime='" + overallEndTime + '\'' +
+                ", delaysType='" + delaysType + '\'' +
                 '}';
     }
 }
