@@ -10,15 +10,21 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ListView;
 import android.widget.TextView;
 import android.view.View.OnClickListener;
 import java.util.ArrayList;
+import android.widget.ArrayAdapter;
+import android.widget.AdapterView;
+import android.widget.FrameLayout;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
+import androidx.fragment.app.FragmentManager;
+import androidx.fragment.app.FragmentTransaction;
 
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
@@ -34,9 +40,18 @@ import java.util.Base64;
 
 
 public class MainActivity extends AppCompatActivity implements OnClickListener {
-    private TextView rawDataDisplay;
+    // To display whether data is loading and how many situations were found
+    private TextView statusText;
+    // Display the situations in a scrollable list
+    private ListView trafficListView;
+    //Storing the complete parsed objects in an ArrayList for later selection/details screens
+    private ArrayList<Situation> displayedSituations = new ArrayList<>();
+
     private Button startButton;
     private Button roadworksButton;
+
+    // Container used to show the selected situation's details
+    private FrameLayout detailsHolder;
 
     //DOWNLOADING FROM TRAFFIC SCOTLAND
     final String clientId = BuildConfig.TRAFFIC_CLIENT_ID;
@@ -57,16 +72,67 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
             return insets;
         });
-        // Set up the raw links to the graphical components
-        rawDataDisplay = (TextView)findViewById(R.id.rawDataDisplay);
+        // Connecting the Java variables to the new XML widgets
+        statusText = findViewById(R.id.statusText);
+        trafficListView = findViewById(R.id.trafficListView);
+
         startButton = (Button)findViewById(R.id.startButton);
         startButton.setOnClickListener(this);
         // Connecting to Current Roadworks button in xml file
         roadworksButton = findViewById(R.id.roadworksButton);
         roadworksButton.setOnClickListener(this);
 
-        // More Code goes here
+        // Connect the details container to its XML View
+        detailsHolder = (FrameLayout) findViewById(R.id.detailsHolder);
 
+        // Listening for the user selecting one of the situations from the traffic list
+        trafficListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+
+                // Checking that the selected position exists inside my ArrayList
+                if (position < 0 || position > displayedSituations.size()) {
+                    return;
+                }
+
+                // Retrieving the Situation for the row that was selected
+                Situation selectedSituation = displayedSituations.get(position);
+
+                // Creating a Fragment which contains the selectedSituations details
+                SituationDetailsFragment detailsFragment =
+                        SituationDetailsFragment.newInstance((selectedSituation));
+
+                // Getting the FragmentManager and starting a transaction
+                FragmentManager manager = getSupportFragmentManager();
+                FragmentTransaction transaction = manager.beginTransaction();
+
+                // Putting the details Fragment into the FrameLayout
+                transaction.replace(R.id.detailsHolder, detailsFragment);
+
+                // Making sure the change is remembered so that we can return back to the list
+                transaction.addToBackStack(null);
+
+                // Applying the changes to the Fragment
+                transaction.commit();
+            }
+        });
+
+        // Listens for changes to the Fragment back stack
+        FragmentManager manager = getSupportFragmentManager();
+
+        manager.addOnBackStackChangedListener(
+                new FragmentManager.OnBackStackChangedListener() {
+                    @Override
+                    public void onBackStackChanged() {
+
+                        // Updating which part of the activity is visible
+                        updateDetailsVisibilty();
+                    }
+                }
+        );
+
+        // Setting the correct visibility when the Activity first opens
+        updateDetailsVisibilty();
     }
 
     public void onClick(View aview)
@@ -74,12 +140,18 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
         // Checking if the Unplanned Events button was clicked
         if (aview.getId() == R.id.startButton) {
 
+            // Letting the user know which feed is loading
+            statusText.setText("Loading Unplanned Events...");
+
             // Passing the Unplanned Events startProgress() to be parsed
             startProgress(unplannedEventsURL);
         }
 
         // Checking if Current Roadworks button was clicked
         if (aview.getId() == R.id.roadworksButton) {
+
+            // Letting the user know that roadworks are loading
+            statusText.setText("Loading Current Roadworks...");
 
             // Passing Current Roadworks to startProgress() to be parsed
             startProgress(currentRoadworksURL);
@@ -525,6 +597,65 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
 
                 // After parsing has finished, show how many situationRecords were found
                 Log.d("Parsing", "Total situations parsed: " + situations.size());
+
+                // Building the readable list entries from the parsed Situation objects
+                ArrayList<String> listEntries = new ArrayList<>();
+
+                // Looping through every situation
+                for (Situation situation : situations) {
+
+                    // Getting the type of situation
+                    String type = situation.getType();
+
+                    // Checking if it is null/empty
+                    if (type == null || type.trim().isEmpty()) {
+                        type = "Unknown situation";
+                    }
+
+                    // Getting the public description
+                    String comment = situation.getGeneralPublicComment();
+
+                    if (comment == null || comment.trim().isEmpty()) {
+                        comment = "No public comment available";
+                    }
+
+                    // Getting the road name if the loction iformation exists
+                    String roadName = "Road not specified";
+
+                    if (situation.getLocation() != null
+                            && situation.getLocation().getRoadName() != null
+                            && !situation.getLocation().getRoadName().trim().isEmpty()) {
+
+                         roadName = situation.getLocation().getRoadName();
+                    }
+
+                    // Creating the text that is displayed for this row
+                    String listEntry = type + " - " + roadName + "\n" + comment;
+
+                    listEntries.add(listEntry);
+                }
+
+                // Returning to the UI thread to display the parsed results
+                MainActivity.this.runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+
+                        // Keeping the complete objects for future detail screens
+                        displayedSituations = new ArrayList<>(situations);
+
+                        // Connecting the readable list entries to the ListView
+                        ArrayAdapter<String> adapter = new ArrayAdapter<>(
+                                MainActivity.this,
+                                android.R.layout.simple_list_item_1,
+                                listEntries
+                        );
+
+                        trafficListView.setAdapter(adapter);
+
+                        // Showing the number of successfully parsed situations
+                        statusText.setText("Loaded " + situations.size() + " situations");
+                    }
+                });
             }
             catch (XmlPullParserException | IOException e) {
 
@@ -532,19 +663,28 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
                 Log.e("Parsing", "EXCEPTION: " + e);
             }
 
-            // Now update the TextView to display raw XML data
-            // Probably not the best way to update TextView
-            // but we are just getting started !
-
-            MainActivity.this.runOnUiThread(new Runnable()
-            {
-                public void run() {
-                    Log.d("UI thread", "I am the UI thread");
-                    rawDataDisplay.setText(result);
-                }
-            });
         }
 
+    }
+
+    // To switch between the traffic list and details Fragment if details list opens the other section
+    // should not be visible
+    private void updateDetailsVisibilty() {
+
+        FragmentManager manager = getSupportFragmentManager();
+
+        // Checking whether a details transaction is in the back stack
+        if (manager.getBackStackEntryCount() > 0) {
+
+            // Hiding the traffic list and displaying the details container
+            trafficListView.setVisibility(View.GONE);
+            detailsHolder.setVisibility(View.VISIBLE);
+        } else {
+
+            // Show the traffic list again when details are closed
+            trafficListView.setVisibility(View.VISIBLE);
+            detailsHolder.setVisibility(View.GONE);
+        }
     }
 
 }

@@ -1,46 +1,54 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- MPD XML Starter code 2025-2026 -->
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/main"
-    android:layout_width="fill_parent"
-    android:layout_height="fill_parent">
-    <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-        android:orientation="vertical"
-        android:layout_width="fill_parent"
-        android:layout_height="fill_parent">
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
 
-        <TextView
-            android:id="@+id/salutation"
-            android:layout_width="fill_parent"
-            android:layout_height="wrap_content"
-            android:textSize="20sp"
-            android:text="Welcome to Mobile Platform Development"
-            />
-        <Button
-            android:id="@+id/startButton"
-            android:layout_width="fill_parent"
-            android:layout_height="wrap_content"
-            android:text="Load Unplanned Events"
-            />
-        <Button
-            android:id="@+id/roadworksButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Load Current Roadworks"
-            />
-        <TextView
-            android:id="@+id/acknowledgement"
-            android:layout_width="fill_parent"
-            android:layout_height="wrap_content"
-            android:textSize="20sp"
-            android:text="Contains Traffic Scotland data"
-            />
-        <TextView
-            android:id="@+id/rawDataDisplay"
-            android:layout_width="fill_parent"
-            android:layout_height="wrap_content"
-            android:textSize="20sp"
-            android:text="Raw Data is Displayed here"
-            />
-    </LinearLayout>
-</ScrollView>
+    <!-- Main title -->
+    <TextView
+        android:id="@+id/salutation"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Traffic Scotland"
+        android:textSize="24sp"
+        android:padding="12dp" />
+
+    <!-- Load incidents -->
+    <Button
+        android:id="@+id/startButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Load Unplanned Events" />
+
+    <!-- Load roadworks -->
+    <Button
+        android:id="@+id/roadworksButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Load Current Roadworks" />
+
+    <!-- Display loading information or number of results -->
+    <TextView
+        android:id="@+id/statusText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Choose a traffic feed to load"
+        android:padding="12dp" />
+
+    <!-- Scrollable collection of traffic situations -->
+    <ListView
+        android:id="@+id/trafficListView"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+    <!-- To hold the Fragment which shows the details of a selected traffic situation -->
+    <FrameLayout
+        android:id="@+id/detailsHolder"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:visibility="gone" />
+
+</LinearLayout>
