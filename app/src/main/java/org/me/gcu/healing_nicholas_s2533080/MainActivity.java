@@ -13,10 +13,13 @@ import android.widget.Button;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.view.View.OnClickListener;
+
 import java.util.ArrayList;
+
 import android.widget.ArrayAdapter;
 import android.widget.AdapterView;
 import android.widget.FrameLayout;
+import android.widget.EditText;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
@@ -46,9 +49,16 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
     private ListView trafficListView;
     //Storing the complete parsed objects in an ArrayList for later selection/details screens
     private ArrayList<Situation> displayedSituations = new ArrayList<>();
+    // Holds all situations that were downloaded
+    private ArrayList<Situation> allSituations = new ArrayList<>();
 
     private Button startButton;
     private Button roadworksButton;
+
+    // Searching for situation widgets
+    private EditText roadSearchInput;
+    private Button searchButton;
+    private Button clearSearchButton;
 
     // Container used to show the selected situation's details
     private FrameLayout detailsHolder;
@@ -76,7 +86,7 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
         statusText = findViewById(R.id.statusText);
         trafficListView = findViewById(R.id.trafficListView);
 
-        startButton = (Button)findViewById(R.id.startButton);
+        startButton = (Button) findViewById(R.id.startButton);
         startButton.setOnClickListener(this);
         // Connecting to Current Roadworks button in xml file
         roadworksButton = findViewById(R.id.roadworksButton);
@@ -85,13 +95,44 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
         // Connect the details container to its XML View
         detailsHolder = (FrameLayout) findViewById(R.id.detailsHolder);
 
+        // Connect the search widgets to the Activity
+        roadSearchInput = (EditText) findViewById(R.id.roadSearchInput);
+        searchButton = (Button) findViewById(R.id.searchButton);
+        clearSearchButton = (Button) findViewById(R.id.clearSearchButton);
+
+
+// Search the downloaded situations when the Search button is clicked
+        searchButton.setOnClickListener(new View.OnClickListener() {
+
+            @Override
+            public void onClick(View v) {
+
+                searchByRoad();
+            }
+        });
+
+// Return to the complete list when Clear is clicked
+        clearSearchButton.setOnClickListener(new View.OnClickListener() {
+
+            @Override
+            public void onClick(View v) {
+
+                // Remove any text entered by the user
+                roadSearchInput.setText("");
+
+                // Display all downloaded situations again
+                showSituations(allSituations);
+            }
+        });
+
+
         // Listening for the user selecting one of the situations from the traffic list
         trafficListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
 
                 // Checking that the selected position exists inside my ArrayList
-                if (position < 0 || position > displayedSituations.size()) {
+                if (position < 0 || position >= displayedSituations.size()) {
                     return;
                 }
 
@@ -135,8 +176,7 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
         updateDetailsVisibilty();
     }
 
-    public void onClick(View aview)
-    {
+    public void onClick(View aview) {
         // Checking if the Unplanned Events button was clicked
         if (aview.getId() == R.id.startButton) {
 
@@ -159,42 +199,41 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
     }
 
     // Updated so url String can be passed in depending on which button was clicked
-    public void startProgress(String url)
-    {
+    public void startProgress(String url) {
         // Run network access on a separate thread using whichever URL was passed in
         new Thread(new Task(url)).start();
     } //
 
     // Need separate thread to access the internet resource over network
     // Other neater solutions should be adopted in later iterations.
-    private class Task implements Runnable
-    {
-        private String result="";
+    private class Task implements Runnable {
+        private String result = "";
         private String myurl;
         BufferedReader in = null;
         String inputLine = "";
-        public Task(String aurl){
+
+        public Task(String aurl) {
             myurl = aurl;
         }
+
         @Override
-        public void run(){
-            Log.d("MyTask","in run");
+        public void run() {
+            Log.d("MyTask", "in run");
             try {
                 URL url = new URL(myurl);
                 HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
                 //ADD AUTHORISATION (string with clientIID:clientKey)
-                urlConnection.setRequestProperty("Authorization",Base64.getEncoder().encodeToString((clientId + ":" + clientKey).getBytes()));
+                urlConnection.setRequestProperty("Authorization", Base64.getEncoder().encodeToString((clientId + ":" + clientKey).getBytes()));
                 try {
                     in = new BufferedReader(new InputStreamReader(urlConnection.getInputStream()));
-                    while ((inputLine = in.readLine()) != null){
+                    while ((inputLine = in.readLine()) != null) {
                         result = result + inputLine;
                     }
                     in.close();
                 } catch (IOException e) {
                     String error = urlConnection.getErrorStream().toString();
                     Log.e("urlConnection", "ioexception");
-                }
-                finally {
+                } finally {
                     urlConnection.disconnect();
                 }
             } catch (IOException e) {
@@ -275,15 +314,11 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
                             currentSituation.setId(id);
 
                             Log.d("Parsing", "Situation type: " + type);
-                        }
-
-                        else if (xpp.getName().equalsIgnoreCase("generalPublicComment")) {
+                        } else if (xpp.getName().equalsIgnoreCase("generalPublicComment")) {
 
                             // Entered into generalPublicComment section
                             insideGeneralPublicComment = true;
-                        }
-
-                        else if (xpp.getName().equalsIgnoreCase("value")
+                        } else if (xpp.getName().equalsIgnoreCase("value")
                                 && insideGeneralPublicComment
                                 && currentSituation != null) {
 
@@ -294,9 +329,7 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
                             currentSituation.setGeneralPublicComment(comment);
 
                             Log.d("Parsing", "Comment: " + comment);
-                        }
-
-                        else if (xpp.getName().equalsIgnoreCase("overallStartTime")
+                        } else if (xpp.getName().equalsIgnoreCase("overallStartTime")
                                 && currentSituation != null) {
 
                             // Reading the text inside the <overAllStartTime> tags
@@ -307,9 +340,7 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
 
                             // Display the result in Logcat
                             Log.d("Parsing", "Start time: " + startTime);
-                        }
-
-                        else if (xpp.getName().equalsIgnoreCase("overallEndTime")
+                        } else if (xpp.getName().equalsIgnoreCase("overallEndTime")
                                 && currentSituation != null) {
 
                             //Reading the text inside overEndTime XML tags
@@ -320,16 +351,12 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
 
                             // Checking the value that was extracted with LogCat
                             Log.d("Parsing", "End time: " + endTime);
-                        }
-
-                        else if (xpp.getName().equalsIgnoreCase("impact")
+                        } else if (xpp.getName().equalsIgnoreCase("impact")
                                 && currentSituation != null) {
 
                             // The parser enters the impact section
                             insideImpact = true;
-                        }
-
-                        else if (xpp.getName().equalsIgnoreCase("numberOfLanesRestricted")
+                        } else if (xpp.getName().equalsIgnoreCase("numberOfLanesRestricted")
                                 && insideImpact
                                 && currentSituation != null) {
 
@@ -340,9 +367,7 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
                             currentSituation.setNumberOfLanesRestricted(restrictedLanes);
 
                             Log.d("Parsing", "Restricted lanes: " + restrictedLanes);
-                        }
-
-                        else if (xpp.getName().equalsIgnoreCase("numberOfOperationalLanes")
+                        } else if (xpp.getName().equalsIgnoreCase("numberOfOperationalLanes")
                                 && insideImpact
                                 && currentSituation != null) {
 
@@ -353,9 +378,7 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
                             currentSituation.setNumberOfOperationalLanes(operationLanes);
 
                             Log.d("Parsing", "Operational lanes: " + operationLanes);
-                        }
-
-                        else if (xpp.getName().equalsIgnoreCase("delaysType")
+                        } else if (xpp.getName().equalsIgnoreCase("delaysType")
                                 && insideImpact
                                 && currentSituation != null) {
 
@@ -367,9 +390,7 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
 
                             // Displaying extracted delay type with LogCat
                             Log.d("Parsing", "Delay type: " + delayType);
-                        }
-
-                        else if (xpp.getName().equalsIgnoreCase("groupOfLocations")
+                        } else if (xpp.getName().equalsIgnoreCase("groupOfLocations")
                                 && currentSituation != null) {
 
                             // Entered the location section of this Situation
@@ -377,9 +398,7 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
 
                             // Creating a TrafficLocation object to hold its location details
                             currentSituation.setLocation(new TrafficLocation());
-                        }
-
-                        else if (xpp.getName().equalsIgnoreCase("tpegDirection")
+                        } else if (xpp.getName().equalsIgnoreCase("tpegDirection")
                                 && currentSituation != null
                                 && currentSituation.getLocation() != null) {
 
@@ -390,23 +409,17 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
                             currentSituation.getLocation().setDirection(direction);
 
                             Log.d("Parsing", "Direction: " + direction);
-                        }
-
-                        else if (xpp.getName().equalsIgnoreCase("from")
+                        } else if (xpp.getName().equalsIgnoreCase("from")
                                 && insideGroupOfLocations) {
 
                             // Now entered into the location starting point
                             insideFrom = true;
-                        }
-
-                        else if (xpp.getName().equalsIgnoreCase("to")
+                        } else if (xpp.getName().equalsIgnoreCase("to")
                                 && insideGroupOfLocations) {
 
                             // Now entered into the location end point section
                             insideTo = true;
-                        }
-
-                        else if (xpp.getName().equalsIgnoreCase("latitude")
+                        } else if (xpp.getName().equalsIgnoreCase("latitude")
                                 && insideGroupOfLocations
                                 && (insideFrom || insideTo)
                                 && currentSituation != null
@@ -437,9 +450,7 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
                                 // If the XML contains an invalid number, don't crash the app
                                 Log.w("Parsing", "Invalid latitude: " + latitudeText);
                             }
-                        }
-
-                        else if (xpp.getName().equalsIgnoreCase("longitude")
+                        } else if (xpp.getName().equalsIgnoreCase("longitude")
                                 && insideGroupOfLocations
                                 && currentSituation != null
                                 && (insideFrom || insideTo)
@@ -458,8 +469,7 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
                                     currentSituation.getLocation().setFromLongitude(longitude);
 
                                     Log.d("Parsing", "From longitude: " + longitude);
-                                }
-                                else if (insideTo) {
+                                } else if (insideTo) {
 
                                     // Setting the longitude end point
                                     currentSituation.getLocation().setToLongitude(longitude);
@@ -471,9 +481,7 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
                                 // Log a warning in case a value is not a number
                                 Log.w("Parsing", "Invalid longitude: " + longitudeText);
                             }
-                        }
-
-                        else if ((xpp.getName().equalsIgnoreCase("name")
+                        } else if ((xpp.getName().equalsIgnoreCase("name")
                                 || xpp.getName().equalsIgnoreCase("ilc"))
                                 && currentSituation != null
                                 && currentSituation.getLocation() != null
@@ -486,9 +494,7 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
                             // Clearing any temp names from the previous element
                             tempRoadName = null;
 
-                        }
-
-                        else if (xpp.getName().equalsIgnoreCase("value")
+                        } else if (xpp.getName().equalsIgnoreCase("value")
                                 && insideRoadName
                                 && currentSituation != null) {
 
@@ -497,16 +503,14 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
 
                             // Holding the name until we can confirm what kind of name it is
                             tempRoadName = possibleName;
-                        }
-
-                        else if ((xpp.getName().equalsIgnoreCase("tpegIlcPointDescriptorType")
+                        } else if ((xpp.getName().equalsIgnoreCase("tpegIlcPointDescriptorType")
                                 || xpp.getName().equalsIgnoreCase("tpegOtherPointDescriptorType"))
                                 && currentSituation != null
                                 && insideRoadName
                                 && currentSituation.getLocation() != null) {
 
                             // Checking what kind of road name we read earlier
-                            String  descriptorType = xpp.nextText();
+                            String descriptorType = xpp.nextText();
 
                             // Only storing names that are identified as primary road or link names
                             if (descriptorType.equalsIgnoreCase("tpegIlcName1")
@@ -549,27 +553,19 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
 
                             // Ready for the next Situation
                             currentSituation = null;
-                        }
-
-                        else if (xpp.getName().equalsIgnoreCase("impact")) {
+                        } else if (xpp.getName().equalsIgnoreCase("impact")) {
 
                             // Finished reading the impact section
                             insideImpact = false;
-                        }
-
-                        else if (xpp.getName().equalsIgnoreCase("from")) {
+                        } else if (xpp.getName().equalsIgnoreCase("from")) {
 
                             // Setting from boolean to false as we've finished reading the starting point
                             insideFrom = false;
-                        }
-
-                        else if (xpp.getName().equalsIgnoreCase("to")) {
+                        } else if (xpp.getName().equalsIgnoreCase("to")) {
 
                             // Setting the to boolean to false as we've finished reading the end point
                             insideTo = false;
-                        }
-
-                        else if (xpp.getName().equalsIgnoreCase("groupOfLocations")) {
+                        } else if (xpp.getName().equalsIgnoreCase("groupOfLocations")) {
 
                             // Finished reading the location information
                             insideGroupOfLocations = false;
@@ -578,9 +574,7 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
                             // get a chance to turn them off
                             insideFrom = false;
                             insideTo = false;
-                        }
-
-                        else if (xpp.getName().equalsIgnoreCase("name")
+                        } else if (xpp.getName().equalsIgnoreCase("name")
                                 || xpp.getName().equalsIgnoreCase("ilc")) {
 
                             // Finished reading the possible road name section
@@ -598,66 +592,24 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
                 // After parsing has finished, show how many situationRecords were found
                 Log.d("Parsing", "Total situations parsed: " + situations.size());
 
-                // Building the readable list entries from the parsed Situation objects
-                ArrayList<String> listEntries = new ArrayList<>();
 
-                // Looping through every situation
-                for (Situation situation : situations) {
-
-                    // Getting the type of situation
-                    String type = situation.getType();
-
-                    // Checking if it is null/empty
-                    if (type == null || type.trim().isEmpty()) {
-                        type = "Unknown situation";
-                    }
-
-                    // Getting the public description
-                    String comment = situation.getGeneralPublicComment();
-
-                    if (comment == null || comment.trim().isEmpty()) {
-                        comment = "No public comment available";
-                    }
-
-                    // Getting the road name if the loction iformation exists
-                    String roadName = "Road not specified";
-
-                    if (situation.getLocation() != null
-                            && situation.getLocation().getRoadName() != null
-                            && !situation.getLocation().getRoadName().trim().isEmpty()) {
-
-                         roadName = situation.getLocation().getRoadName();
-                    }
-
-                    // Creating the text that is displayed for this row
-                    String listEntry = type + " - " + roadName + "\n" + comment;
-
-                    listEntries.add(listEntry);
-                }
-
-                // Returning to the UI thread to display the parsed results
+                // Update the ListView after the downloaded XML has been parsed
                 MainActivity.this.runOnUiThread(new Runnable() {
+
                     @Override
                     public void run() {
 
-                        // Keeping the complete objects for future detail screens
-                        displayedSituations = new ArrayList<>(situations);
+                        // Store the complete downloaded list for searching
+                        allSituations = new ArrayList<>(situations);
 
-                        // Connecting the readable list entries to the ListView
-                        ArrayAdapter<String> adapter = new ArrayAdapter<>(
-                                MainActivity.this,
-                                android.R.layout.simple_list_item_1,
-                                listEntries
-                        );
+                        // Clear any search from the previously selected feed
+                        roadSearchInput.setText("");
 
-                        trafficListView.setAdapter(adapter);
-
-                        // Showing the number of successfully parsed situations
-                        statusText.setText("Loaded " + situations.size() + " situations");
+                        // Display all situations from the newly downloaded feed
+                        showSituations(allSituations);
                     }
                 });
-            }
-            catch (XmlPullParserException | IOException e) {
+            } catch (XmlPullParserException | IOException e) {
 
                 // Catching either an XML parsing error or a problem reading through the XML input
                 Log.e("Parsing", "EXCEPTION: " + e);
@@ -687,4 +639,71 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
         }
     }
 
+    // Displaying the supplied situations using my custom Adapter - needed to updated ListView for in 3 situations
+    // after downloading traffic data, after searching for a road name, after clearing a search
+    private void showSituations(ArrayList<Situation> situationsToShow) {
+
+        // Storing the situations currently displayed on the screen
+        displayedSituations = new ArrayList<>(situationsToShow);
+
+        // Creating the Adapter for the situations I want to show
+        SituationAdapter adapter =
+                new SituationAdapter(this, displayedSituations);
+
+        // Updating the ListView
+        trafficListView.setAdapter(adapter);
+
+        // Showing the number of situations displayed
+        statusText.setText("Showing " + displayedSituations.size() + " situations");
+    }
+
+    // Searching the traffic situations for a particular road
+    private void searchByRoad() {
+
+        // Get the road name entered by the user
+        String road = roadSearchInput.getText().toString().trim();
+
+        // Checking whether any traffic information has been loaded
+        if (allSituations.isEmpty()) {
+            statusText.setText("Load a traffic feed before searching");
+            return;
+        }
+
+        // Checking that the user entered a road name
+        if (road.isEmpty()) {
+            statusText.setText("Please enter a road name");
+            return;
+        }
+
+        // Create a list to store matching situations
+        ArrayList<Situation> matchingSituations = new ArrayList<>();
+
+        // Looping through/checking each Situation
+        for (Situation situation : allSituations) {
+
+            // Some situations might not contain location data
+            if (situation.getLocation() != null) {
+
+                String roadName = situation.getLocation().getRoadName();
+
+                // Making sure the road name exists before comparing it
+                if (roadName != null) {
+
+                    // Comparing the searched road name with road names in all our Situations
+                    if (roadName.toLowerCase().contains(road.toLowerCase())) {
+                        // Adding the matching situations to our results/matchingSituations arrayList
+                        matchingSituations.add(situation);
+                    }
+                }
+            }
+        }
+
+        // Displaying only the situations matching the road name
+        showSituations(matchingSituations);
+
+        // Inform the user if no matching situations were found
+        if (matchingSituations.isEmpty()) {
+            statusText.setText("There were no situations matching " + road);
+        }
+    }
 }
