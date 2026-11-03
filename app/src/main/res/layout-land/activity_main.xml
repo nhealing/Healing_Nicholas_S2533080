@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="horizontal">
+
+    <!-- Left side containing the feed buttons and road search -->
+    <ScrollView
+        android:layout_width="220dp"
+        android:layout_height="match_parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="8dp">
+
+            <!-- Application title -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Traffic Scotland"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="8dp" />
+
+            <!-- Load Unplanned Events -->
+            <Button
+                android:id="@+id/startButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Unplanned Events" />
+
+            <!-- Load Current Roadworks -->
+            <Button
+                android:id="@+id/roadworksButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Current Roadworks" />
+
+            <!-- Enter the name of a road to search -->
+            <EditText
+                android:id="@+id/roadSearchInput"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Road name (e.g. M8)"
+                android:inputType="text"
+                android:singleLine="true" />
+
+            <!-- Search and Clear buttons -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/searchButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Search" />
+
+                <Button
+                    android:id="@+id/clearSearchButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Clear" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+    </ScrollView>
+
+    <!-- Right side containing the traffic list or details Fragment -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:padding="8dp">
+
+        <!-- Displays loading messages and result counts -->
+        <TextView
+            android:id="@+id/statusText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Choose a traffic feed to load"
+            android:layout_marginBottom="8dp" />
+
+        <!-- Displays downloaded traffic situations -->
+        <ListView
+            android:id="@+id/trafficListView"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
+
+        <!-- Displays details when a situation is selected -->
+        <FrameLayout
+            android:id="@+id/detailsHolder"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:visibility="gone" />
+
+    </LinearLayout>
+
+</LinearLayout>

@@ -28,6 +28,7 @@ import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
+import androidx.lifecycle.ViewModelProvider;
 
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
@@ -47,21 +48,29 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
     private TextView statusText;
     // Display the situations in a scrollable list
     private ListView trafficListView;
-    //Storing the complete parsed objects in an ArrayList for later selection/details screens
-    private ArrayList<Situation> displayedSituations = new ArrayList<>();
-    // Holds all situations that were downloaded
-    private ArrayList<Situation> allSituations = new ArrayList<>();
-
-    private Button startButton;
-    private Button roadworksButton;
-
     // Searching for situation widgets
     private EditText roadSearchInput;
+
+
+    // Buttons
+    private Button startButton;
+    private Button roadworksButton;
     private Button searchButton;
     private Button clearSearchButton;
 
     // Container used to show the selected situation's details
     private FrameLayout detailsHolder;
+
+
+    //Storing the complete parsed objects in an ArrayList for later selection/details screens
+    private ArrayList<Situation> displayedSituations = new ArrayList<>();
+    // Holds all situations that were downloaded
+    private ArrayList<Situation> allSituations = new ArrayList<>();
+
+
+    // ViewModel to store traffic data so it can be recovered after screen rotation
+    private TrafficViewModel viewModel;
+
 
     //DOWNLOADING FROM TRAFFIC SCOTLAND
     final String clientId = BuildConfig.TRAFFIC_CLIENT_ID;
@@ -99,6 +108,12 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
         roadSearchInput = (EditText) findViewById(R.id.roadSearchInput);
         searchButton = (Button) findViewById(R.id.searchButton);
         clearSearchButton = (Button) findViewById(R.id.clearSearchButton);
+
+        // Get the ViewModel used to store our traffic data
+        // ViewModelProvider over creating a new TrafficViewModel as the provider will retain the lifecycle of the TrafficViewModel so we dont lose our data on screen rotation
+        ViewModelProvider provider = new ViewModelProvider(this);
+
+        viewModel = provider.get(TrafficViewModel.class);
 
 
 // Search the downloaded situations when the Search button is clicked
@@ -174,6 +189,24 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
 
         // Setting the correct visibility when the Activity first opens
         updateDetailsVisibilty();
+    }
+
+    // Recover traffic information when the Activity starts or is recreated
+    @Override
+    protected void onStart() {
+        super.onStart();
+
+        // Getting the previously downloaded situations from the ViewModel
+        allSituations = viewModel.getAllSituations();
+
+        // Getting the situations that were being displayed
+        displayedSituations = viewModel.getDisplayedSituations();
+
+        // Restoring the ListView if traffic information has already been loaded
+        if (!allSituations.isEmpty()) {
+
+            showSituations(displayedSituations);
+        }
     }
 
     public void onClick(View aview) {
@@ -602,6 +635,9 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
                         // Store the complete downloaded list for searching
                         allSituations = new ArrayList<>(situations);
 
+                        // Saving the list of all Situations in the ViewModel so it survives during screen rotation
+                        viewModel.setAllSituations(allSituations);
+
                         // Clear any search from the previously selected feed
                         roadSearchInput.setText("");
 
@@ -639,12 +675,15 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
         }
     }
 
-    // Displaying the supplied situations using my custom Adapter - needed to updated ListView for in 3 situations
+    // Displaying the supplied situations using a custom Adapter - needed to updat ListView in 3 situations
     // after downloading traffic data, after searching for a road name, after clearing a search
     private void showSituations(ArrayList<Situation> situationsToShow) {
 
         // Storing the situations currently displayed on the screen
         displayedSituations = new ArrayList<>(situationsToShow);
+
+        // Remember the displayed list in case the screen rotates
+        viewModel.setDisplayedSituations(displayedSituations);
 
         // Creating the Adapter for the situations I want to show
         SituationAdapter adapter =
