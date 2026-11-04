@@ -13,6 +13,7 @@ import android.widget.Button;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.view.View.OnClickListener;
+import android.location.Location;
 
 import java.util.ArrayList;
 
@@ -71,6 +72,13 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
     // ViewModel to store traffic data so it can be recovered after screen rotation
     private TrafficViewModel viewModel;
 
+    // Widgets used for searching for situations by distance
+    private EditText distanceInput;
+    private Button nearbyButton;
+
+    // Fixed coordinates for Glasgow city centre
+    private final double glasgowLatitude = 55.861;
+    private final double glasgowLongitude = -4.252;
 
     //DOWNLOADING FROM TRAFFIC SCOTLAND
     final String clientId = BuildConfig.TRAFFIC_CLIENT_ID;
@@ -109,6 +117,10 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
         searchButton = (Button) findViewById(R.id.searchButton);
         clearSearchButton = (Button) findViewById(R.id.clearSearchButton);
 
+        // Connecting the distance search widgets to their XML Views
+        distanceInput = (EditText) findViewById(R.id.distanceInput);
+        nearbyButton = (Button) findViewById(R.id.nearbyButton);
+
         // Get the ViewModel used to store our traffic data
         // ViewModelProvider over creating a new TrafficViewModel as the provider will retain the lifecycle of the TrafficViewModel so we dont lose our data on screen rotation
         ViewModelProvider provider = new ViewModelProvider(this);
@@ -134,6 +146,9 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
 
                 // Remove any text entered by the user
                 roadSearchInput.setText("");
+
+                // Clear/remove the distance searched
+                distanceInput.setText("");
 
                 // Display all downloaded situations again
                 showSituations(allSituations);
@@ -170,6 +185,16 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
 
                 // Applying the changes to the Fragment
                 transaction.commit();
+            }
+        });
+
+        // Search for nearby situations when the button is clicked
+        nearbyButton.setOnClickListener(new View.OnClickListener() {
+
+            @Override
+            public void onClick(View v) {
+
+                searchByDistance();
             }
         });
 
@@ -702,9 +727,9 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
         // Get the road name entered by the user
         String road = roadSearchInput.getText().toString().trim();
 
-        // Checking whether any traffic information has been loaded
+        // Checking whether any situation information has been loaded
         if (allSituations.isEmpty()) {
-            statusText.setText("Load a traffic feed before searching");
+            statusText.setText("Load a road situation before searching");
             return;
         }
 
@@ -714,7 +739,7 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
             return;
         }
 
-        // Create a list to store matching situations
+        // Creating a list to store matching situations
         ArrayList<Situation> matchingSituations = new ArrayList<>();
 
         // Looping through/checking each Situation
@@ -728,7 +753,7 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
                 // Making sure the road name exists before comparing it
                 if (roadName != null) {
 
-                    // Comparing the searched road name with road names in all our Situations
+                    // Comparing the searched road name with road names in our Situation
                     if (roadName.toLowerCase().contains(road.toLowerCase())) {
                         // Adding the matching situations to our results/matchingSituations arrayList
                         matchingSituations.add(situation);
@@ -744,5 +769,114 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
         if (matchingSituations.isEmpty()) {
             statusText.setText("There were no situations matching " + road);
         }
+    }
+
+    // Method to check if a traffic situation is within the chosen distance of fixed location in Glasgow City Centre
+    private boolean isWithinDistance(double latitude, double longitude,
+                                     double distanceKm) {
+
+        // Check that the entered coordinates are valid
+        if (latitude < -90 || latitude > 90
+                || longitude < -180 || longitude > 180
+                || (latitude == 0 && longitude == 0)) {
+            return false;
+        }
+
+        // Create a Location object for Glasgow city centre
+        Location glasgow = new Location("fixed");
+        glasgow.setLatitude(glasgowLatitude);
+        glasgow.setLongitude(glasgowLongitude);
+
+        // Create a Location object for the traffic situation
+        Location trafficLocation = new Location("traffic");
+        trafficLocation.setLatitude(latitude);
+        trafficLocation.setLongitude(longitude);
+
+        // Calculating the distance between the two locations in metres using distanceTo method
+        float distanceMetres = glasgow.distanceTo(trafficLocation);
+
+        // Convert from metres in to kilometres
+        double calculatedDistance = distanceMetres / 1000.0;
+
+        // Checking whether the situation is close enough
+        return calculatedDistance <= distanceKm;
+    }
+
+    // Searching for traffic situations within the requested distance
+    private void searchByDistance() {
+
+        // Checking that the user has loaded some traffic data
+        if (allSituations.isEmpty()) {
+            statusText.setText("Load some traffic data before searching");
+            return;
+        }
+
+        // Getting the distance entered by the user
+        String distanceText = distanceInput.getText().toString().trim();
+
+        if (distanceText.isEmpty()) {
+            statusText.setText("Please enter distance");
+            return;
+        }
+
+        // Converting the entered distance from text into a number
+        double distanceInKm;
+
+        try {
+            distanceInKm = Double.parseDouble(distanceText);
+        } catch (NumberFormatException e) {
+            statusText.setText("Please enter a valid distance");
+            return;
+        }
+
+        // Distance must be a positive number
+        if (distanceInKm <= 0) {
+            statusText.setText("Distance must be greater than zero");
+            return;
+        }
+
+        // Creating an ArrayList to store situations within the distance
+        ArrayList<Situation> nearbySituations = new ArrayList<>();
+
+        // Checking each situation from the loaded traffic dadta
+        for (Situation situation : allSituations) {
+
+            TrafficLocation location = situation.getLocation();
+
+            // Some situations might not have location information
+            if (location != null) {
+
+                boolean nearby = false;
+
+                // Checking the starting coordinates if they exists
+                Double fromLat = location.getFromLatitude();
+                Double fromLon = location.getFromLongitude();
+
+                if (fromLat != null && fromLon != null) {
+
+                    nearby = isWithinDistance(fromLat, fromLon, distanceInKm);
+                }
+
+                // Also checking the ending coordinates
+                Double toLat = location.getToLatitude();
+                Double toLon = location.getToLongitude();
+
+                if (!nearby && toLat != null && toLon != null) {
+
+                    nearby = isWithinDistance(toLat, toLon, distanceInKm);
+                }
+
+                // Adding this Situation if either location is nearby
+                if (nearby) {
+                    nearbySituations.add(situation);
+                }
+            }
+        }
+
+        // Displaying the situations that matched the distance search
+        showSituations(nearbySituations);
+
+        // Displaying the number of results found
+        statusText.setText("Found " + nearbySituations.size() + " situation within " + distanceInKm + " km of Glasgow City Centre");
     }
 }
