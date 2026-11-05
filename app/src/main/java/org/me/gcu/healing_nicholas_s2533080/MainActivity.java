@@ -27,9 +27,11 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
+import androidx.lifecycle.ViewModelProvider;
+
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
-import androidx.lifecycle.ViewModelProvider;
+import androidx.fragment.app.Fragment;
 
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
@@ -49,6 +51,7 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 
 
 public class MainActivity extends AppCompatActivity
@@ -246,6 +249,22 @@ public class MainActivity extends AppCompatActivity
 
             showSituations(displayedSituations);
         }
+
+        // Making sure on rotation the map and its markers are still loaded into the framelayout
+        // Checking which Fragment Android has restored after rotation - asking which fragment is currently in the framelayout
+        Fragment currentFragment = getSupportFragmentManager()
+                .findFragmentById(R.id.detailsHolder);
+
+        // If the restored Fragment is Google Maps, reconnect the callback
+        if (currentFragment instanceof SupportMapFragment) {
+
+            SupportMapFragment mapFragment =
+                    (SupportMapFragment) currentFragment;
+
+            // Call onMapReady again when the restored map is ready
+            mapFragment.getMapAsync(this);
+        }
+
     }
 
     public void onClick(View aview) {
@@ -681,6 +700,33 @@ public class MainActivity extends AppCompatActivity
                 // After parsing has finished, show how many situationRecords were found
                 Log.d("Parsing", "Total situations parsed: " + situations.size());
 
+                // Temporary check to see all the different types and delay types in the situations
+                // Find the different combinations of situation type and delays
+                ArrayList<String> iconCategories = new ArrayList<>();
+
+                // Check every Situation that was parsed from the XML
+                for (Situation situation : situations) {
+
+                    String type = situation.getType();
+                    String delaysType = situation.getDelaysType();
+
+                    // Some situations don't provide a delay category
+                    if (delaysType == null || delaysType.isEmpty()) {
+                        delaysType = "Not specified";
+                    }
+
+                    // Combine the situation type and its delay category
+                    String category = type + " / " + delaysType;
+
+                    // Only store each combination once
+                    if (!iconCategories.contains(category)) {
+                        iconCategories.add(category);
+                    }
+                }
+
+                // Show the different combinations in Logcat
+                Log.d("Parsing", "Icon categories: " + iconCategories);
+
 
                 // Update the ListView after the downloaded XML has been parsed
                 MainActivity.this.runOnUiThread(new Runnable() {
@@ -915,6 +961,9 @@ public class MainActivity extends AppCompatActivity
     @Override
     public void onMapReady(GoogleMap googleMap) {
 
+        // Clearing any previous markers before displaying the current situations
+        googleMap.clear();
+
         // Starting the map with an overview of Scotland
         LatLng scotland = new LatLng(56.5, -4.2);
 
@@ -970,13 +1019,39 @@ public class MainActivity extends AppCompatActivity
                 type = "Traffic situation";
             }
 
+            // Setting up the different icons depending on the situation type
+            // Start with a red marker for any unknown situation type
+            float markerColour = BitmapDescriptorFactory.HUE_RED;
+
+            // Choose a different colour depending on the XML situation type
+            if (type.equalsIgnoreCase("RoadOrCarriagewayOrLaneManagement")) {
+
+                markerColour = BitmapDescriptorFactory.HUE_ORANGE;
+
+            } else if (type.equalsIgnoreCase("GeneralObstruction")) {
+
+                markerColour = BitmapDescriptorFactory.HUE_RED;
+
+            } else if (type.equalsIgnoreCase("AbnormalTraffic")) {
+
+                markerColour = BitmapDescriptorFactory.HUE_YELLOW;
+
+            } else if (type.equalsIgnoreCase("MaintenanceWorks")) {
+
+                markerColour = BitmapDescriptorFactory.HUE_AZURE;
+            }
+
+
             // Create a map position from the XML coordinates
             LatLng position = new LatLng(latitude, longitude);
 
             // Add a marker for this Situation
+            // Add a marker with the colour chosen for this situation type
             googleMap.addMarker(new MarkerOptions()
                     .position(position)
-                    .title(roadName + " - " + type));
+                    .title(roadName + " - " + type)
+                    .icon(BitmapDescriptorFactory.defaultMarker(markerColour)));
+
 
             markerCount++;
         }
