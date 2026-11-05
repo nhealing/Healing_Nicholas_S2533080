@@ -1019,26 +1019,53 @@ public class MainActivity extends AppCompatActivity
                 type = "Traffic situation";
             }
 
-            // Setting up the different icons depending on the situation type
-            // Start with a red marker for any unknown situation type
-            float markerColour = BitmapDescriptorFactory.HUE_RED;
+            // Choosing an icon based on the situation type and delay information
+            // Default icon for an unknown traffic situation
+            int markerIcon = R.drawable.map_obstruction;
 
-            // Choose a different colour depending on the XML situation type
+            // Text describing the situation when a map marker is selected to make it more readable for the user
+            String markerDescription = type;
+
+
             if (type.equalsIgnoreCase("RoadOrCarriagewayOrLaneManagement")) {
 
-                markerColour = BitmapDescriptorFactory.HUE_ORANGE;
+                markerIcon = R.drawable.map_lane;
+                markerDescription = "Road or lane management";
 
             } else if (type.equalsIgnoreCase("GeneralObstruction")) {
 
-                markerColour = BitmapDescriptorFactory.HUE_RED;
+                markerIcon = R.drawable.map_obstruction;
+                markerDescription = "Road obstruction";
 
             } else if (type.equalsIgnoreCase("AbnormalTraffic")) {
 
-                markerColour = BitmapDescriptorFactory.HUE_YELLOW;
+                markerIcon = R.drawable.map_traffic;
+                markerDescription = "Abnormal traffic";
 
             } else if (type.equalsIgnoreCase("MaintenanceWorks")) {
 
-                markerColour = BitmapDescriptorFactory.HUE_AZURE;
+                String delaysType = situation.getDelaysType();
+
+                if ("veryLongDelays".equalsIgnoreCase(delaysType)) {
+
+                    markerIcon = R.drawable.map_very_long_delays;
+                    markerDescription = "Roadworks - Very long delays";
+
+                } else if ("longDelays".equalsIgnoreCase(delaysType)) {
+
+                    markerIcon = R.drawable.map_long_delays;
+                    markerDescription = "Roadworks - Long delays";
+
+                } else if ("delays".equalsIgnoreCase(delaysType)) {
+
+                    markerIcon = R.drawable.map_delays;
+                    markerDescription = "Roadworks - Delays";
+
+                } else {
+
+                    markerIcon = R.drawable.map_roadworks;
+                    markerDescription = "Roadworks - Delays not specified";
+                }
             }
 
 
@@ -1047,10 +1074,12 @@ public class MainActivity extends AppCompatActivity
 
             // Add a marker for this Situation
             // Add a marker with the colour chosen for this situation type
+
             googleMap.addMarker(new MarkerOptions()
                     .position(position)
-                    .title(roadName + " - " + type)
-                    .icon(BitmapDescriptorFactory.defaultMarker(markerColour)));
+                    .title(roadName + " - " + markerDescription)
+                    .icon(BitmapDescriptorFactory.fromResource(markerIcon)));
+
 
 
             markerCount++;
