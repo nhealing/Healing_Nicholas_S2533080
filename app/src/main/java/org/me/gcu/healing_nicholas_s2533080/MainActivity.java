@@ -53,6 +53,9 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 
+import android.os.Handler;
+import android.os.Looper;
+
 
 public class MainActivity extends AppCompatActivity
         implements OnClickListener, OnMapReadyCallback {
@@ -71,6 +74,10 @@ public class MainActivity extends AppCompatActivity
     private Button clearSearchButton;
     // Button to open our map
     private Button mapButton;
+
+    // Each new download gets a number so that we can identify the latest request
+    // Older downloads can still finish, but their results will not replace newer requests
+    private int latestDownloadId = 0;
 
     // Container used to show the selected situation's details
     private FrameLayout detailsHolder;
@@ -101,6 +108,43 @@ public class MainActivity extends AppCompatActivity
     final String unplannedEventsURL = "https://datex2.trafficscotland.org/rest/2.3/publications/UnplannedEvents/Content.xml";
     // URL for the Traffic Scotland Current Roadworks XML feed
     final String currentRoadworksURL = "https://datex2.trafficscotland.org/rest/2.3/publications/CurrentRoadworks/Content.xml";
+
+
+    // Handler used to schedule automatic parsing of traffic data
+    private Handler refreshHandler = new Handler(Looper.getMainLooper());
+
+    // Refresh every hour
+    // When testing i temporarily changed to 1 * 60 * 1000L so it refreshes every 1 minutes
+    private final long REFRESH_INTERVAL = 60 * 60 * 1000L;
+
+    // Task which downloads the selected feed at regular intervals
+    private Runnable refreshTask = new Runnable() {
+        @Override
+        public void run() {
+
+            // Getting the URL for the curreently seleccted feed
+            String url = viewModel.getSelectedFeedUrl();
+
+            // If the user hasn't chosen a feed then use Unplanned Events
+            if (url == null) {
+                url = unplannedEventsURL;
+            }
+
+            // Logging the refresh
+            Log.d("AutoRefresh", "Refreshing selected Traffic Scotland feed");
+
+
+            // Update the download number
+            latestDownloadId++;
+
+            // Download the selected feed while preserving the search
+            new Thread(new Task(url, true, latestDownloadId)).start();
+
+            // Schedule this Runnable to run itself again later
+            refreshHandler.postDelayed(this, REFRESH_INTERVAL);
+        }
+    };
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -245,10 +289,22 @@ public class MainActivity extends AppCompatActivity
         displayedSituations = viewModel.getDisplayedSituations();
 
         // Restoring the ListView if traffic information has already been loaded
+
+        // Restore previously downloaded data after screen rotation
         if (!allSituations.isEmpty()) {
 
             showSituations(displayedSituations);
+
+        } else {
+
+            // No traffic data loaded yet, so download it automatically
+            statusText.setText("Loading Unplanned Events...");
+
+            Log.d("AutoRefresh", "Loading Unplanned Events at startup");
+
+            startProgress(unplannedEventsURL);
         }
+
 
         // Making sure on rotation the map and its markers are still loaded into the framelayout
         // Checking which Fragment Android has restored after rotation - asking which fragment is currently in the framelayout
@@ -264,6 +320,13 @@ public class MainActivity extends AppCompatActivity
             // Call onMapReady again when the restored map is ready
             mapFragment.getMapAsync(this);
         }
+
+
+        // Removing any scheduled callbacks so as not to accidentally create multiple timers
+        refreshHandler.removeCallbacks(refreshTask);
+        // Scheduling one refresh after the chosen interval
+        refreshHandler.postDelayed(refreshTask, REFRESH_INTERVAL);
+
 
     }
 
@@ -307,22 +370,46 @@ public class MainActivity extends AppCompatActivity
     }
 
     // Updated so url String can be passed in depending on which button was clicked
+
+
     public void startProgress(String url) {
-        // Run network access on a separate thread using whichever URL was passed in
-        new Thread(new Task(url)).start();
-    } //
+
+        // Remember which traffic feed the user selected
+        viewModel.setSelectedFeedUrl(url);
+
+        // Assign a new number to this download
+        latestDownloadId++;
+
+        // Log the number so we can check each button press
+        Log.d("AutoRefresh", "Starting download: " + latestDownloadId);
+
+        // Start the download on the background thread
+        new Thread(new Task(url, false, latestDownloadId)).start();
+    }
+
+
 
     // Need separate thread to access the internet resource over network
     // Other neater solutions should be adopted in later iterations.
     private class Task implements Runnable {
         private String result = "";
         private String myurl;
+        private boolean preserveSearch;
         BufferedReader in = null;
         String inputLine = "";
 
-        public Task(String aurl) {
+        // Number assigned when this download started
+        private int downloadId;
+
+        // Constructor for building Task, I added a boolean to preserve the users search when parsed data is downloaded
+        // such as false - the user manually selected to download traffic events so proivde the full list or true - it was an automatic refresh so maintain the current list that was already loaded
+        public Task(String aurl, boolean keepSearch, int id) {
+
             myurl = aurl;
+            preserveSearch = keepSearch;
+            downloadId = id;
         }
+
 
         @Override
         public void run() {
@@ -339,7 +426,7 @@ public class MainActivity extends AppCompatActivity
                     }
                     in.close();
                 } catch (IOException e) {
-                    String error = urlConnection.getErrorStream().toString();
+                    Log.e("urlConnection", "Could not download traffic data", e);
                     Log.e("urlConnection", "ioexception");
                 } finally {
                     urlConnection.disconnect();
@@ -349,8 +436,51 @@ public class MainActivity extends AppCompatActivity
             }
 
             //Clean up any leading garbage characters
-            int i = result.indexOf("<?"); //initial tag
+            int i = result.indexOf("<?");
+
+            if (i == -1) {
+
+                // No valid XML was received
+                Log.e("AutoRefresh", "No XML received - keeping existing traffic data");
+
+                // Tell the UI thread that the download failed
+                refreshHandler.post(new Runnable() {
+
+                    @Override
+                    public void run() {
+
+                        // Ignore this error if a newer download has started
+                        if (downloadId != latestDownloadId) {
+                            return;
+                        }
+
+                        // Ignore failures from a previously selected feed
+                        if (!myurl.equals(viewModel.getSelectedFeedUrl())) {
+                            return;
+                        }
+
+                        // Check whether previously downloaded data exists
+                        if (allSituations.isEmpty()) {
+
+                            statusText.setText(
+                                    "Unable to load traffic data. Check your connection.");
+
+                        } else {
+
+                            // Keep the old results and show an error message
+                            statusText.setText(
+                                    "Refresh failed - showing "
+                                            + displayedSituations.size()
+                                            + " previously loaded situations");
+                        }
+                    }
+                });
+
+                return;
+            }
+
             result = result.substring(i);
+
 
             // Now that you have the xml data into result, you can parse it
             // Creating a PullParser so we can extract useful information from it
@@ -729,23 +859,65 @@ public class MainActivity extends AppCompatActivity
 
 
                 // Update the ListView after the downloaded XML has been parsed
-                MainActivity.this.runOnUiThread(new Runnable() {
+                // Posts from worker to the main UI making it safe to update widgets here
+                refreshHandler.post(new Runnable() {
 
                     @Override
                     public void run() {
 
-                        // Store the complete downloaded list for searching
-                        allSituations = new ArrayList<>(situations);
+                        // Only allow the newest download to update the screen
+                        if (downloadId != latestDownloadId) {
 
-                        // Saving the list of all Situations in the ViewModel so it survives during screen rotation
+                            Log.d("AutoRefresh",
+                                    "Ignoring older download: " + downloadId);
+
+                            return;
+                        }
+
+                        // Ignoring a download if the user has switched feeds
+                        if (!myurl.equals(viewModel.getSelectedFeedUrl())) {
+                            Log.d("AutoRefresh", "Ignoring result from previously selected feed");
+                            return;
+                        }
+
+                        // Storing the newly downloaded situations
+                        allSituations = new ArrayList<>(situations);
                         viewModel.setAllSituations(allSituations);
 
-                        // Clear any search from the previously selected feed
-                        roadSearchInput.setText("");
+                        if (preserveSearch) {
 
-                        // Display all situations from the newly downloaded feed
-                        showSituations(allSituations);
+                            // Reapply the road search if one is entered
+                            String road = roadSearchInput.getText().toString().trim();
+                            String distance = distanceInput.getText().toString().trim();
+
+                            // Reapply an existing road search
+                            if (!road.isEmpty()) {
+
+                                searchByRoad();
+
+                            } else if (!distance.isEmpty()) {
+
+                                // Reapply the distance search
+                                searchByDistance();
+
+                            } else {
+
+                                // User manually selected a different feed
+                                showSituations(allSituations);
+                            }
+
+                        } else {
+
+                            // A new feed was manually selected
+                            roadSearchInput.setText("");
+                            distanceInput.setText("");
+
+                            showSituations(allSituations);
+                        }
+
+                        Log.d("AutoRefresh", "Traffic list updated");
                     }
+
                 });
             } catch (XmlPullParserException | IOException e) {
 
@@ -1081,7 +1253,6 @@ public class MainActivity extends AppCompatActivity
                     .icon(BitmapDescriptorFactory.fromResource(markerIcon)));
 
 
-
             markerCount++;
         }
 
@@ -1091,6 +1262,16 @@ public class MainActivity extends AppCompatActivity
 
         // Showing how many markers were created in Logcat
         Log.d("TrafficMap", "Added " + markerCount + " markers");
+    }
+
+    // Making sure the auto download of parsed data doesn't run when the app is not visible
+    @Override
+    protected void onStop() {
+
+        // Stop scheduling updates when the Activity is no longer visible
+        refreshHandler.removeCallbacks(refreshTask);
+
+        super.onStop();
     }
 
 

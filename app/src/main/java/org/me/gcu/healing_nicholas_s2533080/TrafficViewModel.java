@@ -12,6 +12,10 @@ public class TrafficViewModel extends ViewModel {
     // Stores the situations currently shown in the ListView
     private ArrayList<Situation> displayedSituations = new ArrayList<>();
 
+    // Remember which Traffic Scotland feed the user selected
+    private String selectedFeedUrl;
+
+
     // Save the complete list of downloaded situations
     public void setAllSituations(ArrayList<Situation> situations) {
         allSituations = new ArrayList<>(situations);
@@ -31,4 +35,15 @@ public class TrafficViewModel extends ViewModel {
     public ArrayList<Situation> getDisplayedSituations() {
         return displayedSituations;
     }
+
+    // Returning the currently selected URL
+    public String getSelectedFeedUrl() {
+        return selectedFeedUrl;
+    }
+
+    // Updating the selectedURL
+    public void setSelectedFeedUrl(String url) {
+        selectedFeedUrl = url;
+    }
 }
+
