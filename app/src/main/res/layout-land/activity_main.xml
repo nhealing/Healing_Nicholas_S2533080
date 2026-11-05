@@ -39,6 +39,15 @@
                 android:layout_height="wrap_content"
                 android:text="Current Roadworks" />
 
+
+            <!-- Open a Google Map showing traffic locations -->
+            <Button
+                android:id="@+id/mapButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="View Map" />
+
+
             <!-- Enter the name of a road to search -->
             <EditText
                 android:id="@+id/roadSearchInput"

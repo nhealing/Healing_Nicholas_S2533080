@@ -43,8 +43,16 @@ import java.net.URL;
 import java.net.HttpURLConnection;
 import java.util.Base64;
 
+import com.google.android.gms.maps.CameraUpdateFactory;
+import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.OnMapReadyCallback;
+import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.MarkerOptions;
 
-public class MainActivity extends AppCompatActivity implements OnClickListener {
+
+public class MainActivity extends AppCompatActivity
+        implements OnClickListener, OnMapReadyCallback {
     // To display whether data is loading and how many situations were found
     private TextView statusText;
     // Display the situations in a scrollable list
@@ -58,6 +66,8 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
     private Button roadworksButton;
     private Button searchButton;
     private Button clearSearchButton;
+    // Button to open our map
+    private Button mapButton;
 
     // Container used to show the selected situation's details
     private FrameLayout detailsHolder;
@@ -120,6 +130,10 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
         // Connecting the distance search widgets to their XML Views
         distanceInput = (EditText) findViewById(R.id.distanceInput);
         nearbyButton = (Button) findViewById(R.id.nearbyButton);
+
+        // Connecting the View Map button to the Activity
+        mapButton = (Button) findViewById(R.id.mapButton);
+        mapButton.setOnClickListener(this);
 
         // Get the ViewModel used to store our traffic data
         // ViewModelProvider over creating a new TrafficViewModel as the provider will retain the lifecycle of the TrafficViewModel so we dont lose our data on screen rotation
@@ -254,6 +268,23 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
             // Passing Current Roadworks to startProgress() to be parsed
             startProgress(currentRoadworksURL);
         }
+
+        // Checking if the View Map button was clicked
+        if (aview.getId() == R.id.mapButton) {
+
+            // Creating a Google Maps Fragment
+            SupportMapFragment mapFragment = SupportMapFragment.newInstance();
+
+            // Displaying the map in the same container we use for situation details
+            getSupportFragmentManager().beginTransaction()
+                    .replace(R.id.detailsHolder, mapFragment)
+                    .addToBackStack(null)
+                    .commit();
+
+            // Calling onMapReady when Google Maps has loaded
+            mapFragment.getMapAsync(this);
+        }
+
     }
 
     // Updated so url String can be passed in depending on which button was clicked
@@ -879,4 +910,84 @@ public class MainActivity extends AppCompatActivity implements OnClickListener {
         // Displaying the number of results found
         statusText.setText("Found " + nearbySituations.size() + " situation within " + distanceInKm + " km of Glasgow City Centre");
     }
+
+
+    @Override
+    public void onMapReady(GoogleMap googleMap) {
+
+        // Starting the map with an overview of Scotland
+        LatLng scotland = new LatLng(56.5, -4.2);
+
+        // Count how many traffic markers we add
+        int markerCount = 0;
+
+        // Check every Situation currently displayed in the ListView
+        for (Situation situation : displayedSituations) {
+
+            // Get the location information for this Situation
+            TrafficLocation location = situation.getLocation();
+
+            // Some situations might not have location information
+            if (location == null) {
+                continue;
+            }
+
+            // First try the starting coordinates
+            Double latitude = location.getFromLatitude();
+            Double longitude = location.getFromLongitude();
+
+            // If the starting coordinates are missing or invalid,
+            // try the ending coordinates instead
+            if (latitude == null || longitude == null
+                    || latitude < -90 || latitude > 90
+                    || longitude < -180 || longitude > 180
+                    || (latitude == 0 && longitude == 0)) {
+
+                latitude = location.getToLatitude();
+                longitude = location.getToLongitude();
+            }
+
+            // Skip situations that still have invalid coordinates
+            if (latitude == null || longitude == null
+                    || latitude < -90 || latitude > 90
+                    || longitude < -180 || longitude > 180
+                    || (latitude == 0 && longitude == 0)) {
+
+                continue;
+            }
+
+            // Get the road name for the marker
+            String roadName = location.getRoadName();
+
+            if (roadName == null || roadName.isEmpty()) {
+                roadName = "Unknown road";
+            }
+
+            // Get the type of incident or roadwork
+            String type = situation.getType();
+
+            if (type == null || type.isEmpty()) {
+                type = "Traffic situation";
+            }
+
+            // Create a map position from the XML coordinates
+            LatLng position = new LatLng(latitude, longitude);
+
+            // Add a marker for this Situation
+            googleMap.addMarker(new MarkerOptions()
+                    .position(position)
+                    .title(roadName + " - " + type));
+
+            markerCount++;
+        }
+
+        // Centre the map on Scotland
+        googleMap.moveCamera(
+                CameraUpdateFactory.newLatLngZoom(scotland, 6f));
+
+        // Showing how many markers were created in Logcat
+        Log.d("TrafficMap", "Added " + markerCount + " markers");
+    }
+
+
 }
