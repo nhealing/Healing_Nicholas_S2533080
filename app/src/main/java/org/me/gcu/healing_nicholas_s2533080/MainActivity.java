@@ -56,6 +56,10 @@ import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import android.os.Handler;
 import android.os.Looper;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.FileInputStream;
+
 
 public class MainActivity extends AppCompatActivity
         implements OnClickListener, OnMapReadyCallback {
@@ -388,7 +392,6 @@ public class MainActivity extends AppCompatActivity
     }
 
 
-
     // Need separate thread to access the internet resource over network
     // Other neater solutions should be adopted in later iterations.
     private class Task implements Runnable {
@@ -436,7 +439,60 @@ public class MainActivity extends AppCompatActivity
             }
 
             //Clean up any leading garbage characters
+            // Check whether XML was downloaded successfully
+            boolean loadedFromFile = false;
             int i = result.indexOf("<?");
+
+            // If the download failed, try reading our saved XML from internal storage
+            if (i == -1) {
+
+                // Each feed has its own saved file
+                String fileName = "unplanned_events.xml";
+
+                if (myurl.equals(currentRoadworksURL)) {
+                    fileName = "current_roadworks.xml";
+                }
+
+                // Finding the file in the app's internal storage
+                File dir = getApplication().getFilesDir();
+                String path = dir.getAbsolutePath();
+                File f = new File(path, fileName);
+
+                try {
+
+                    // Opening the saved file for reading
+                    FileInputStream fin = new FileInputStream(f);
+                    BufferedReader reader = new BufferedReader(new InputStreamReader(fin));
+
+                    // Reading the saved XML into the result String
+                    result = "";
+                    String line;
+
+                    while ((line = reader.readLine()) != null) {
+                        result = result + line;
+                    }
+
+                    // Close the reader
+                    reader.close();
+
+                    // Check whether the saved file contains XML
+                    i = result.indexOf("<?");
+
+                    if (i != -1) {
+                        loadedFromFile = true;
+
+                        Log.d("OfflineCache", "Loaded saved XML from " + fileName);
+                    }
+
+                } catch (IOException e) {
+
+                    result = "";
+                    i = -1;
+
+                    Log.e("OfflineCache", "Could not read saved XML file", e);
+                }
+            }
+
 
             if (i == -1) {
 
@@ -858,6 +914,47 @@ public class MainActivity extends AppCompatActivity
                 Log.d("Parsing", "Icon categories: " + iconCategories);
 
 
+                // This allows the application to use the data without internet later
+                // Save only new live downloads, not XML read from storage
+                if (downloadId == latestDownloadId && !loadedFromFile) {
+
+                    // Each traffic feed has a separate saved file
+                    String fileName = "unplanned_events.xml";
+
+                    if (myurl.equals(currentRoadworksURL)) {
+                        fileName = "current_roadworks.xml";
+                    }
+
+                    // Get the application's private internal storage folder
+                    File dir = getApplication().getFilesDir();
+                    String path = dir.getAbsolutePath();
+
+                    // Create a File object representing the XML file
+                    File f = new File(path, fileName);
+
+                    try {
+
+                        // Open the file for writing
+                        FileOutputStream fos = new FileOutputStream(f);
+
+                        // Writing the downloaded XML String into the file
+                        fos.write(result.getBytes());
+
+                        // Close the file after writing
+                        fos.close();
+
+                        Log.d("OfflineCache", "Saved " + situations.size() + " situations to " + fileName);
+
+                    } catch (IOException e) {
+
+                        // Logging the error but still display the downloaded data
+                        Log.e("OfflineCache", "Error saving XML file", e);
+                    }
+                }
+
+                // To remember whether the displayed information came from internal storage
+                final boolean showingSavedData = loadedFromFile;
+
                 // Update the ListView after the downloaded XML has been parsed
                 // Posts from worker to the main UI making it safe to update widgets here
                 refreshHandler.post(new Runnable() {
@@ -868,8 +965,7 @@ public class MainActivity extends AppCompatActivity
                         // Only allow the newest download to update the screen
                         if (downloadId != latestDownloadId) {
 
-                            Log.d("AutoRefresh",
-                                    "Ignoring older download: " + downloadId);
+                            Log.d("AutoRefresh", "Ignoring older download: " + downloadId);
 
                             return;
                         }
@@ -913,6 +1009,13 @@ public class MainActivity extends AppCompatActivity
                             distanceInput.setText("");
 
                             showSituations(allSituations);
+                        }
+
+
+                        // Telling the user if these results came from a saved file
+                        if (showingSavedData) {
+                            statusText.setText("Offline - showing " + displayedSituations.size()
+                                    + " saved situations (may be out of date)");
                         }
 
                         Log.d("AutoRefresh", "Traffic list updated");
