@@ -437,7 +437,7 @@ public class MainActivity extends AppCompatActivity
                 Log.e("URL", "ioexception");
             }
 
-            //Clean up any leading garbage characters
+            // Clean up any leading garbage characters
             // Check whether XML was downloaded successfully
             boolean loadedFromFile = false;
             int i = result.indexOf("<?");
@@ -590,8 +590,7 @@ public class MainActivity extends AppCompatActivity
 
                             Log.d("Parsing", "New situation record found");
 
-                            // We have reached a new situation, so create a new Java
-                            // Situation object to store its data
+                            // We have reached a new situation, so create a new Situation object to store its data
                             currentSituation = new Situation();
 
                             // Attribute 0 contains the type of situation
@@ -885,33 +884,6 @@ public class MainActivity extends AppCompatActivity
                 // After parsing has finished, show how many situationRecords were found
                 Log.d("Parsing", "Total situations parsed: " + situations.size());
 
-                // Temporary check to see all the different types and delay types in the situations
-                // Find the different combinations of situation type and delays
-                ArrayList<String> iconCategories = new ArrayList<>();
-
-                // Check every Situation that was parsed from the XML
-                for (Situation situation : situations) {
-
-                    String type = situation.getType();
-                    String delaysType = situation.getDelaysType();
-
-                    // Some situations don't provide a delay category
-                    if (delaysType == null || delaysType.isEmpty()) {
-                        delaysType = "Not specified";
-                    }
-
-                    // Combine the situation type and its delay category
-                    String category = type + " / " + delaysType;
-
-                    // Only store each combination once
-                    if (!iconCategories.contains(category)) {
-                        iconCategories.add(category);
-                    }
-                }
-
-                // Show the different combinations in Logcat
-                Log.d("Parsing", "Icon categories: " + iconCategories);
-
 
                 // This allows the application to use the data without internet later
                 // Save only new live downloads, not XML read from storage
@@ -1088,6 +1060,9 @@ public class MainActivity extends AppCompatActivity
             return;
         }
 
+        // Clear the previous distance search when searching by road
+        distanceInput.setText("");
+
         // Creating a list to store matching situations
         ArrayList<Situation> matchingSituations = new ArrayList<>();
 
@@ -1184,6 +1159,9 @@ public class MainActivity extends AppCompatActivity
             statusText.setText("Distance must be greater than zero");
             return;
         }
+
+        // Clear the previous road search when searching by distance
+        roadSearchInput.setText("");
 
         // Creating an ArrayList to store situations within the distance
         ArrayList<Situation> nearbySituations = new ArrayList<>();
