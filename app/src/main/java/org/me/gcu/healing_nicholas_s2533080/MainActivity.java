@@ -118,7 +118,6 @@ public class MainActivity extends AppCompatActivity
     private Handler refreshHandler = new Handler(Looper.getMainLooper());
 
     // Refresh every hour
-    // When testing i temporarily changed to 1 * 60 * 1000L so it refreshes every 1 minutes
     private final long REFRESH_INTERVAL = 60 * 60 * 1000L;
 
     // Task which downloads the selected feed at regular intervals
@@ -281,7 +280,8 @@ public class MainActivity extends AppCompatActivity
         updateDetailsVisibilty();
     }
 
-    // Recover traffic information when the Activity starts or is recreated
+    // Called when Activity becomes visible and restores traffic data from the ViewModel after rotations
+    // or downloads Unplanned Events if no data has been loaded plus schedules the next automatic update
     @Override
     protected void onStart() {
         super.onStart();
@@ -373,9 +373,7 @@ public class MainActivity extends AppCompatActivity
 
     }
 
-    // Updated so url String can be passed in depending on which button was clicked
-
-
+    // Starts download of selected Traffic feed and remember the chosen URL + runes Task on background thread
     public void startProgress(String url) {
 
         // Remember which traffic feed the user selected
@@ -391,9 +389,8 @@ public class MainActivity extends AppCompatActivity
         new Thread(new Task(url, false, latestDownloadId)).start();
     }
 
-
-    // Need separate thread to access the internet resource over network
-    // Other neater solutions should be adopted in later iterations.
+    // Creates a Task for the selected URL. keepSearch decides whether an existing search should be preserved
+    // id identifies the download so older results can be ignored
     private class Task implements Runnable {
         private String result = "";
         private String myurl;
@@ -413,7 +410,9 @@ public class MainActivity extends AppCompatActivity
             downloadId = id;
         }
 
-
+        // Runs on the worker thread. Downloads XML or reads saved XML from internal file if download fails
+        // Parses the data into the Situation objects and saves successful downloads
+        // Uses the Handler to display the results on the UI thread
         @Override
         public void run() {
             Log.d("MyTask", "in run");
@@ -1032,8 +1031,7 @@ public class MainActivity extends AppCompatActivity
 
     }
 
-    // To switch between the traffic list and details Fragment if details list opens the other section
-    // should not be visible
+    // Switches between the traffic list and the details/map container
     private void updateDetailsVisibilty() {
 
         FragmentManager manager = getSupportFragmentManager();
@@ -1052,8 +1050,7 @@ public class MainActivity extends AppCompatActivity
         }
     }
 
-    // Displaying the supplied situations using a custom Adapter - needed to updat ListView in 3 situations
-    // after downloading traffic data, after searching for a road name, after clearing a search
+    // Displays situations in ListView using custom Adapter. Also saves the displayed list in the ViewModel
     private void showSituations(ArrayList<Situation> situationsToShow) {
 
         // Storing the situations currently displayed on the screen
@@ -1073,7 +1070,7 @@ public class MainActivity extends AppCompatActivity
         statusText.setText("Showing " + displayedSituations.size() + " situations");
     }
 
-    // Searching the traffic situations for a particular road
+    // Searching the traffic situations for a particular road entered by user. Displays matching situations in ListView
     private void searchByRoad() {
 
         // Get the road name entered by the user
@@ -1123,7 +1120,8 @@ public class MainActivity extends AppCompatActivity
         }
     }
 
-    // Method to check if a traffic situation is within the chosen distance of fixed location in Glasgow City Centre
+    // Calculates the distance between fixed location (Glasgow City Centre) and a traffic location
+    // Returns true if the location is within the distance that was searched
     private boolean isWithinDistance(double latitude, double longitude,
                                      double distanceKm) {
 
@@ -1154,7 +1152,7 @@ public class MainActivity extends AppCompatActivity
         return calculatedDistance <= distanceKm;
     }
 
-    // Searching for traffic situations within the requested distance
+    // Searches for traffic situations within a distance of Glasgow. Checks from and to coordinates and displays matching results
     private void searchByDistance() {
 
         // Checking that the user has loaded some traffic data
@@ -1233,6 +1231,7 @@ public class MainActivity extends AppCompatActivity
     }
 
 
+    // Called when Google Maps is ready to use. Adds markers for the currently displayed situations
     @Override
     public void onMapReady(GoogleMap googleMap) {
 
@@ -1367,7 +1366,7 @@ public class MainActivity extends AppCompatActivity
         Log.d("TrafficMap", "Added " + markerCount + " markers");
     }
 
-    // Making sure the auto download of parsed data doesn't run when the app is not visible
+    // Called when Activity is no longer visible and stops the automatic data refreshes until Activity starts again
     @Override
     protected void onStop() {
 
