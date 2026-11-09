@@ -93,8 +93,30 @@ public class Situation {
         this.location = location;
     }
 
-    //Including all attributes in the toString() so i can check they're being extracted properly with LogCat
 
+    // Converting the XML situation type into a more readable description for the user
+    public String getDisplayType() {
+
+        if (type == null || type.isEmpty()) {
+            return "Traffic situation";
+        }
+
+        if (type.equalsIgnoreCase("RoadOrCarriagewayOrLaneManagement")) {
+            return "Road or lane management";
+        } else if (type.equalsIgnoreCase("GeneralObstruction")) {
+            return "Road obstruction";
+        } else if (type.equalsIgnoreCase("AbnormalTraffic")) {
+            return "Abnormal traffic";
+        } else if (type.equalsIgnoreCase("MaintenanceWorks")) {
+            return "Roadworks";
+        }
+
+        // Return the original type if it is not one we recognise
+        return type;
+    }
+
+
+    //Including all attributes in the toString() so i can check they're being extracted properly with LogCat
     @Override
     public String toString() {
         return "Situation{" +

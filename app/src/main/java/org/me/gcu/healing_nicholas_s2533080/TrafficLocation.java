@@ -28,6 +28,30 @@ public class TrafficLocation {
         return direction;
     }
 
+    // Converting the XML direction into a more readable description for the user
+    public String getDisplayDirection() {
+
+        if (direction == null || direction.isEmpty()) {
+            return "Not provided";
+        }
+
+        if (direction.equalsIgnoreCase("eastBound")) {
+            return "Eastbound";
+        } else if (direction.equalsIgnoreCase("westBound")) {
+            return "Westbound";
+        } else if (direction.equalsIgnoreCase("northBound")) {
+            return "Northbound";
+        } else if (direction.equalsIgnoreCase("southBound")) {
+            return "Southbound";
+        } else if (direction.equalsIgnoreCase("bothDirections")) {
+            return "Both directions";
+        }
+
+        // Return the original direction if it is not one we recognise
+        return direction;
+    }
+
+
     public void setDirection(String direction) {
         this.direction = direction;
     }

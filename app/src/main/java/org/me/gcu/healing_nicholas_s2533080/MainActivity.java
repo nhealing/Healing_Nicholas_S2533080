@@ -14,6 +14,7 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.view.View.OnClickListener;
 import android.location.Location;
+import android.widget.ProgressBar;
 
 import java.util.ArrayList;
 
@@ -69,6 +70,8 @@ public class MainActivity extends AppCompatActivity
     private ListView trafficListView;
     // Searching for situation widgets
     private EditText roadSearchInput;
+    // Shows a spinning wheel while traffic information is loading
+    private ProgressBar loadingSpinner;
 
 
     // Buttons
@@ -140,6 +143,9 @@ public class MainActivity extends AppCompatActivity
             // Update the download number
             latestDownloadId++;
 
+            // Show the spinner while the automatic update is running
+            loadingSpinner.setVisibility(View.VISIBLE);
+
             // Download the selected feed while preserving the search
             new Thread(new Task(url, true, latestDownloadId)).start();
 
@@ -161,6 +167,8 @@ public class MainActivity extends AppCompatActivity
         });
         // Connecting the Java variables to the new XML widgets
         statusText = findViewById(R.id.statusText);
+        // Connect the loading spinner to the XML layout
+        loadingSpinner = findViewById(R.id.loadingSpinner);
         trafficListView = findViewById(R.id.trafficListView);
 
         startButton = (Button) findViewById(R.id.startButton);
@@ -385,6 +393,9 @@ public class MainActivity extends AppCompatActivity
         // Log the number so we can check each button press
         Log.d("AutoRefresh", "Starting download: " + latestDownloadId);
 
+        // Show the spinner while the selected feed is downloading
+        loadingSpinner.setVisibility(View.VISIBLE);
+
         // Start the download on the background thread
         new Thread(new Task(url, false, latestDownloadId)).start();
     }
@@ -514,19 +525,18 @@ public class MainActivity extends AppCompatActivity
                             return;
                         }
 
+                        // Stop the spinner because no traffic information could be loaded
+                        loadingSpinner.setVisibility(View.GONE);
+
                         // Check whether previously downloaded data exists
                         if (allSituations.isEmpty()) {
-
-                            statusText.setText(
-                                    "Unable to load traffic data. Check your connection.");
+                            statusText.setText("Unable to load traffic data. Check your connection.");
 
                         } else {
 
                             // Keep the old results and show an error message
-                            statusText.setText(
-                                    "Refresh failed - showing "
-                                            + displayedSituations.size()
-                                            + " previously loaded situations");
+                            statusText.setText("Refresh failed - showing " + displayedSituations.size()
+                                    + " previously loaded situations");
                         }
                     }
                 });
@@ -946,6 +956,9 @@ public class MainActivity extends AppCompatActivity
                             Log.d("AutoRefresh", "Ignoring result from previously selected feed");
                             return;
                         }
+
+                        // Hide the spinner now that the information has loaded
+                        loadingSpinner.setVisibility(View.GONE);
 
                         // Storing the newly downloaded situations
                         allSituations = new ArrayList<>(situations);

@@ -44,8 +44,8 @@ public class SituationAdapter extends ArrayAdapter<Situation> {
 
         if (situation != null) {
 
-            // Get the situation type
-            String type = situation.getType();
+            // Getting the readable situation type for displaying the list
+            String type = situation.getDisplayType();
 
             if (type == null || type.isEmpty()) {
                 type = "Unknown situation";

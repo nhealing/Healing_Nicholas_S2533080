@@ -22,7 +22,7 @@ public class SituationDetailsFragment extends Fragment {
         // Packaging data so it can be used in the fragment
         Bundle args = new Bundle();
 
-        args.putString("type", situation.getType());
+        args.putString("type", situation.getDisplayType());
         args.putString("comment", situation.getGeneralPublicComment());
         args.putString("startTime", situation.getOverallStartTime());
         args.putString("endTime", situation.getOverallEndTime());
@@ -33,7 +33,7 @@ public class SituationDetailsFragment extends Fragment {
         // Check in case Situation does not contain location information
         if (situation.getLocation() != null) {
             args.putString("roadName", situation.getLocation().getRoadName());
-            args.putString("direction", situation.getLocation().getDirection());
+            args.putString("direction", situation.getLocation().getDisplayDirection());
         }
 
         fragment.setArguments(args);

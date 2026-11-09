@@ -112,6 +112,18 @@
             android:padding="12dp"
             android:text="Choose a traffic feed to load" />
 
+
+        <!-- Spinning wheel displayed while traffic information is loading -->
+        <ProgressBar
+            android:id="@+id/loadingSpinner"
+            style="?android:attr/progressBarStyleSmall"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:layout_margin="8dp"
+            android:visibility="gone" />
+
+
         <!-- Scrollable collection of traffic situations -->
         <ListView
             android:id="@+id/trafficListView"
