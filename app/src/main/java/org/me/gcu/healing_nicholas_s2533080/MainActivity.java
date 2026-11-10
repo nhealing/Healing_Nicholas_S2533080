@@ -964,6 +964,9 @@ public class MainActivity extends AppCompatActivity
                         allSituations = new ArrayList<>(situations);
                         viewModel.setAllSituations(allSituations);
 
+                        // Remember whether this traffic data came from saved XML
+                        viewModel.setShowingSavedData(showingSavedData);
+
                         if (preserveSearch) {
 
                             // Reapply the road search if one is entered
@@ -995,12 +998,6 @@ public class MainActivity extends AppCompatActivity
                             showSituations(allSituations);
                         }
 
-
-                        // Telling the user if these results came from a saved file
-                        if (showingSavedData) {
-                            statusText.setText("Offline - showing " + displayedSituations.size()
-                                    + " saved situations (may be out of date)");
-                        }
 
                         Log.d("AutoRefresh", "Traffic list updated");
                     }
@@ -1051,8 +1048,19 @@ public class MainActivity extends AppCompatActivity
         // Updating the ListView
         trafficListView.setAdapter(adapter);
 
-        // Showing the number of situations displayed
-        statusText.setText("Showing " + displayedSituations.size() + " situations");
+
+        // Display the correct status depending on where the data came from
+        if (viewModel.isShowingSavedData()) {
+
+            statusText.setText("Offline - showing " + displayedSituations.size()
+                    + " saved situations (may be out of date)");
+
+        } else {
+
+            statusText.setText("Showing " + displayedSituations.size()
+                    + " situations");
+        }
+
     }
 
     // Searching the traffic situations for a particular road entered by user. Displays matching situations in ListView
@@ -1102,10 +1110,18 @@ public class MainActivity extends AppCompatActivity
         // Displaying only the situations matching the road name
         showSituations(matchingSituations);
 
-        // Inform the user if no matching situations were found
+        // Inform the user if no matching road was found
         if (matchingSituations.isEmpty()) {
-            statusText.setText("There were no situations matching " + road);
+
+            String message = "There were no situations matching " + road;
+
+            if (viewModel.isShowingSavedData()) {
+                message = message + " (offline - saved data may be out of date)";
+            }
+
+            statusText.setText(message);
         }
+
     }
 
     // Calculates the distance between fixed location (Glasgow City Centre) and a traffic location
@@ -1217,8 +1233,17 @@ public class MainActivity extends AppCompatActivity
         // Displaying the situations that matched the distance search
         showSituations(nearbySituations);
 
-        // Displaying the number of results found
-        statusText.setText("Found " + nearbySituations.size() + " situation within " + distanceInKm + " km of Glasgow City Centre");
+        // Display how many situations matched the distance search
+        String resultMessage = "Found " + nearbySituations.size()
+                + " situations within " + distanceInKm + " km of Glasgow City Centre";
+
+        // Inform the user if the search used saved information
+        if (viewModel.isShowingSavedData()) {
+            resultMessage = resultMessage + " (offline - saved data may be out of date)";
+        }
+
+        statusText.setText(resultMessage);
+
     }
 
 

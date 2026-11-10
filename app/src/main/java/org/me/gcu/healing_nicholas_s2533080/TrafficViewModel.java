@@ -15,6 +15,9 @@ public class TrafficViewModel extends ViewModel {
     // Remember which Traffic Scotland feed the user selected
     private String selectedFeedUrl;
 
+    // Remember whether the current traffic information came from saved XML
+    private boolean showingSavedData = false;
+
 
     // Save the complete list of downloaded situations
     public void setAllSituations(ArrayList<Situation> situations) {
@@ -44,6 +47,16 @@ public class TrafficViewModel extends ViewModel {
     // Updating the selectedURL
     public void setSelectedFeedUrl(String url) {
         selectedFeedUrl = url;
+    }
+
+    // Returning whether the data is live or came from internal storage
+    public boolean isShowingSavedData() {
+        return showingSavedData;
+    }
+
+    // Setting whether the data is live or came from internal storage
+    public void setShowingSavedData(boolean showingSavedData) {
+        this.showingSavedData = showingSavedData;
     }
 }
 

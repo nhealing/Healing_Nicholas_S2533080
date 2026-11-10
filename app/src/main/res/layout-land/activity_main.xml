@@ -61,7 +61,8 @@
                 android:layout_height="wrap_content"
                 android:hint="Road name (e.g. M8)"
                 android:inputType="text"
-                android:singleLine="true" />
+                android:singleLine="true"
+                android:imeOptions="flagNoFullscreen" />
 
             <!-- Search and Clear buttons -->
             <LinearLayout
@@ -104,7 +105,8 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:inputType="numberDecimal"
-                    android:hint="Distance in km (e.g. 20)" />
+                    android:hint="Distance in km (e.g. 20)"
+                    android:imeOptions="flagNoFullscreen" />
 
                 <!-- Button to search for nearby situations -->
                 <Button
