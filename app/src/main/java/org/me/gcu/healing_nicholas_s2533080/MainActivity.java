@@ -6,52 +6,48 @@
 
 package org.me.gcu.healing_nicholas_s2533080;
 
+import android.location.Location;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import android.view.View;
-import android.widget.Button;
-import android.widget.ListView;
-import android.widget.TextView;
 import android.view.View.OnClickListener;
-import android.location.Location;
-import android.widget.ProgressBar;
-
-import java.util.ArrayList;
-
 import android.widget.AdapterView;
-import android.widget.FrameLayout;
+import android.widget.Button;
 import android.widget.EditText;
+import android.widget.FrameLayout;
+import android.widget.ListView;
+import android.widget.ProgressBar;
+import android.widget.TextView;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
-import androidx.lifecycle.ViewModelProvider;
-
+import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
-import androidx.fragment.app.Fragment;
+import androidx.lifecycle.ViewModelProvider;
+
+import com.google.android.gms.maps.CameraUpdateFactory;
+import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.OnMapReadyCallback;
+import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
+import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.MarkerOptions;
 
 import org.xmlpull.v1.XmlPullParserException;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.net.URL;
 import java.net.HttpURLConnection;
+import java.net.URL;
+import java.util.ArrayList;
 import java.util.Base64;
-
-import com.google.android.gms.maps.CameraUpdateFactory;
-import com.google.android.gms.maps.GoogleMap;
-import com.google.android.gms.maps.OnMapReadyCallback;
-import com.google.android.gms.maps.SupportMapFragment;
-import com.google.android.gms.maps.model.LatLng;
-import com.google.android.gms.maps.model.MarkerOptions;
-import com.google.android.gms.maps.model.BitmapDescriptorFactory;
-
-import android.os.Handler;
-import android.os.Looper;
 
 
 public class MainActivity extends AppCompatActivity
@@ -627,11 +623,42 @@ public class MainActivity extends AppCompatActivity
                     }
 
                 });
+
             } catch (XmlPullParserException | IOException e) {
 
-                // Catching either an XML parsing error or a problem reading through the XML input
-                Log.e("Parsing", "EXCEPTION: " + e);
+                // Log the error if the XML could not be parsed
+                Log.e("Parsing", "Could not parse XML", e);
+
+                // Return to the UI thread to stop the loading symbol
+                refreshHandler.post(new Runnable() {
+                    @Override
+                    public void run() {
+
+                        // Ignore errors if a newer download has started
+                        if (downloadId != latestDownloadId) {
+                            return;
+                        }
+
+                        // Ignore errors from a previously selected feed
+                        if (!myurl.equals(viewModel.getSelectedFeedUrl())) {
+                            return;
+                        }
+
+                        // Hide the loading symbol because parsing has stopped
+                        loadingSpinner.setVisibility(View.GONE);
+
+                        // Show an error message without removing existing results
+                        if (allSituations.isEmpty()) {
+                            statusText.setText("Unable to read traffic data.");
+                        } else {
+                            statusText.setText("Unable to read new data - showing "
+                                    + displayedSituations.size()
+                                    + " previously loaded situations");
+                        }
+                    }
+                });
             }
+
 
         }
 
