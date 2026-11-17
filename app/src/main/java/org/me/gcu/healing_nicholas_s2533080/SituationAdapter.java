@@ -8,6 +8,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.TextView;
+import android.widget.ImageView;
 
 import java.util.ArrayList;
 
@@ -41,6 +42,8 @@ public class SituationAdapter extends ArrayAdapter<Situation> {
         TextView rowTitle = (TextView) v.findViewById(R.id.rowTitle);
         TextView rowComment = (TextView) v.findViewById(R.id.rowComment);
         TextView rowDelay = (TextView) v.findViewById(R.id.rowDelay);
+        // Find the ImageView used to display the situation icon
+        ImageView rowIcon = (ImageView) v.findViewById(R.id.rowIcon);
 
         if (situation != null) {
 
@@ -50,6 +53,55 @@ public class SituationAdapter extends ArrayAdapter<Situation> {
             if (type == null || type.isEmpty()) {
                 type = "Unknown situation";
             }
+
+
+            // Getting the original situation type from the XML
+            // so we can choose the same icon used on Google Maps
+            String situationType = situation.getType();
+
+            // Default icon for other traffic situations
+            int icon = R.drawable.map_obstruction;
+
+            // Choose the correct icon for the situation type
+            if ("RoadOrCarriagewayOrLaneManagement".equalsIgnoreCase(situationType)) {
+
+                icon = R.drawable.map_lane;
+
+            } else if ("GeneralObstruction".equalsIgnoreCase(situationType)) {
+
+                icon = R.drawable.map_obstruction;
+
+            } else if ("AbnormalTraffic".equalsIgnoreCase(situationType)) {
+
+                icon = R.drawable.map_traffic;
+
+            } else if ("MaintenanceWorks".equalsIgnoreCase(situationType)) {
+
+                // Roadworks use different icons depending on the reported delay
+                String delaysType = situation.getDelaysType();
+
+                if ("veryLongDelays".equalsIgnoreCase(delaysType)) {
+
+                    icon = R.drawable.map_very_long_delays;
+
+                } else if ("longDelays".equalsIgnoreCase(delaysType)) {
+
+                    icon = R.drawable.map_long_delays;
+
+                } else if ("delays".equalsIgnoreCase(delaysType)) {
+
+                    icon = R.drawable.map_delays;
+
+                } else {
+
+                    // Roadworks without a specified delay
+                    icon = R.drawable.map_roadworks;
+                }
+            }
+
+            // Display the selected icon in this ListView row
+            rowIcon.setImageResource(icon);
+
 
             // Get the road name if it exists
             String roadName = "Unknown road";
