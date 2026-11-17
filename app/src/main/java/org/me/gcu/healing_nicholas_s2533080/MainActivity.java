@@ -18,7 +18,6 @@ import android.widget.ProgressBar;
 
 import java.util.ArrayList;
 
-import android.widget.ArrayAdapter;
 import android.widget.AdapterView;
 import android.widget.FrameLayout;
 import android.widget.EditText;
@@ -34,14 +33,11 @@ import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
 import androidx.fragment.app.Fragment;
 
-import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
-import org.xmlpull.v1.XmlPullParserFactory;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.StringReader;
 import java.net.URL;
 import java.net.HttpURLConnection;
 import java.util.Base64;
@@ -56,10 +52,6 @@ import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 
 import android.os.Handler;
 import android.os.Looper;
-
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.FileInputStream;
 
 
 public class MainActivity extends AppCompatActivity
@@ -453,45 +445,33 @@ public class MainActivity extends AppCompatActivity
             boolean loadedFromFile = false;
             int i = result.indexOf("<?");
 
-            // If the download failed, try reading our saved XML from internal storage
+            // Each traffic feed has its own saved file
+            String fileName = "unplanned_events.xml";
+
+            if (myurl.equals(currentRoadworksURL)) {
+                fileName = "current_roadworks.xml";
+            }
+
+
+            // If the download failed, try loading saved XML
             if (i == -1) {
-
-                // Each feed has its own saved file
-                String fileName = "unplanned_events.xml";
-
-                if (myurl.equals(currentRoadworksURL)) {
-                    fileName = "current_roadworks.xml";
-                }
-
-                // Finding the file in the app's internal storage
-                File dir = getApplication().getFilesDir();
-                String path = dir.getAbsolutePath();
-                File f = new File(path, fileName);
 
                 try {
 
-                    // Opening the saved file for reading
-                    FileInputStream fin = new FileInputStream(f);
-                    BufferedReader reader = new BufferedReader(new InputStreamReader(fin));
-
-                    // Reading the saved XML into the result String
-                    result = "";
-                    String line;
-
-                    while ((line = reader.readLine()) != null) {
-                        result = result + line;
-                    }
-
-                    // Close the reader
-                    reader.close();
+                    // Read the saved XML using our separate storage class
+                    result = TrafficStorage.loadXml(
+                            getApplicationContext(), fileName);
 
                     // Check whether the saved file contains XML
                     i = result.indexOf("<?");
 
                     if (i != -1) {
+
+                        // Remember that this data was loaded offline
                         loadedFromFile = true;
 
-                        Log.d("OfflineCache", "Loaded saved XML from " + fileName);
+                        Log.d("OfflineCache",
+                                "Loaded saved XML from " + fileName);
                     }
 
                 } catch (IOException e) {
@@ -499,7 +479,8 @@ public class MainActivity extends AppCompatActivity
                     result = "";
                     i = -1;
 
-                    Log.e("OfflineCache", "Could not read saved XML file", e);
+                    Log.e("OfflineCache",
+                            "Could not read saved XML file", e);
                 }
             }
 
@@ -558,37 +539,21 @@ public class MainActivity extends AppCompatActivity
                 // Save only new live downloads, not XML read from storage
                 if (downloadId == latestDownloadId && !loadedFromFile) {
 
-                    // Each traffic feed has a separate saved file
-                    String fileName = "unplanned_events.xml";
-
-                    if (myurl.equals(currentRoadworksURL)) {
-                        fileName = "current_roadworks.xml";
-                    }
-
-                    // Get the application's private internal storage folder
-                    File dir = getApplication().getFilesDir();
-                    String path = dir.getAbsolutePath();
-
-                    // Create a File object representing the XML file
-                    File f = new File(path, fileName);
-
                     try {
 
-                        // Open the file for writing
-                        FileOutputStream fos = new FileOutputStream(f);
+                        // Save the XML using our separate storage class
+                        TrafficStorage.saveXml(
+                                getApplicationContext(), fileName, result);
 
-                        // Writing the downloaded XML String into the file
-                        fos.write(result.getBytes());
-
-                        // Close the file after writing
-                        fos.close();
-
-                        Log.d("OfflineCache", "Saved " + situations.size() + " situations to " + fileName);
+                        Log.d("OfflineCache",
+                                "Saved " + situations.size()
+                                        + " situations to " + fileName);
 
                     } catch (IOException e) {
 
-                        // Logging the error but still display the downloaded data
-                        Log.e("OfflineCache", "Error saving XML file", e);
+                        // Log the error but still display downloaded data
+                        Log.e("OfflineCache",
+                                "Error saving XML file", e);
                     }
                 }
 
