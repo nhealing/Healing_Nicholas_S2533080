@@ -54,3 +54,10 @@ The XML parsing and file storage were moved into separate classes to keep `MainA
 
 Unplanned Events and Current Roadworks are saved in separate XML files. The application can use these saved files if a download fails, but the relevant feed must have been downloaded successfully at least once on that installation.
 
+## Map icons
+
+I used seven icons from Google's Material Symbols to represent different types of traffic situations on Google Maps.
+
+The icons are used for road or lane management, road obstructions, abnormal traffic and roadworks with different reported delays. I resized the icons to 64 × 64 pixels so they could be displayed clearly on the map.
+
+**Source:** https://fonts.google.com/icons
