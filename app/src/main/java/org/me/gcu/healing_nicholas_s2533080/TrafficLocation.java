@@ -43,7 +43,8 @@ public class TrafficLocation {
             return "Northbound";
         } else if (direction.equalsIgnoreCase("southBound")) {
             return "Southbound";
-        } else if (direction.equalsIgnoreCase("bothDirections")) {
+        } else if (direction.equalsIgnoreCase("bothDirections")
+                || direction.equalsIgnoreCase("bothWays")) {
             return "Both directions";
         }
 

@@ -12,11 +12,33 @@ public class TrafficViewModel extends ViewModel {
     // Stores the situations currently shown in the ListView
     private ArrayList<Situation> displayedSituations = new ArrayList<>();
 
-    // Remember which Traffic Scotland feed the user selected
+    // Remembering which Traffic Scotland feed the user selected
     private String selectedFeedUrl;
 
-    // Remember whether the current traffic information came from saved XML
+    // Remembering whether the current traffic information came from saved XML
     private boolean showingSavedData = false;
+
+    // Remembering whether a download is running when the screen rotates
+    private boolean downloading = false;
+
+    // Remembering whether the download should keep the current search
+    private boolean keepSearchOnDownload = false;
+
+    public boolean isDownloading() {
+        return downloading;
+    }
+
+    public void setDownloading(boolean downloading) {
+        this.downloading = downloading;
+    }
+
+    public boolean isKeepSearchOnDownload() {
+        return keepSearchOnDownload;
+    }
+
+    public void setKeepSearchOnDownload(boolean keepSearch) {
+        keepSearchOnDownload = keepSearch;
+    }
 
 
     // Save the complete list of downloaded situations

@@ -56,8 +56,8 @@ Unplanned Events and Current Roadworks are saved in separate XML files. The appl
 
 ## Map icons
 
-I used seven icons from Google's Material Symbols to represent different types of traffic situations on Google Maps.
+I used seven icons from Google's Material Symbols to represent different types of traffic situations on Google Maps and in the ListView.
 
-The icons are used for road or lane management, road obstructions, abnormal traffic and roadworks with different reported delays. I resized the icons to 64 × 64 pixels so they could be displayed clearly on the map.
+The icons are used for road or lane management, road obstructions, abnormal traffic and roadworks with different reported delays. I resized the icons to 64 × 64 pixels so they could be displayed clearly in the application.
 
 **Source:** https://fonts.google.com/icons

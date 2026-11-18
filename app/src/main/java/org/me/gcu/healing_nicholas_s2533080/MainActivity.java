@@ -74,6 +74,9 @@ public class MainActivity extends AppCompatActivity
     // Older downloads can still finish, but their results will not replace newer requests
     private int latestDownloadId = 0;
 
+    // Remember whether the Activity was recreated after rotation
+    private boolean restoringAfterRotation = false;
+
     // Container used to show the selected situation's details
     private FrameLayout detailsHolder;
 
@@ -127,6 +130,9 @@ public class MainActivity extends AppCompatActivity
             // Logging the refresh
             Log.d("AutoRefresh", "Refreshing selected Traffic Scotland feed");
 
+            // Remember that an automatic refresh is running
+            viewModel.setDownloading(true);
+            viewModel.setKeepSearchOnDownload(true);
 
             // Update the download number
             latestDownloadId++;
@@ -146,6 +152,10 @@ public class MainActivity extends AppCompatActivity
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        // Check whether Android is restoring a previous Activity
+        restoringAfterRotation = savedInstanceState != null;
+
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
@@ -295,7 +305,7 @@ public class MainActivity extends AppCompatActivity
 
             showSituations(displayedSituations);
 
-        } else {
+        } else if (!viewModel.isDownloading()) {
 
             // No traffic data loaded yet, so download it automatically
             statusText.setText("Loading Unplanned Events...");
@@ -304,6 +314,35 @@ public class MainActivity extends AppCompatActivity
 
             startProgress(unplannedEventsURL);
         }
+
+        // Restart the selected download if the screen rotated while loading
+        if (restoringAfterRotation && viewModel.isDownloading()) {
+
+            String url = viewModel.getSelectedFeedUrl();
+
+            // Use Unplanned Events if no feed was selected
+            if (url == null) {
+                url = unplannedEventsURL;
+            }
+
+            // Show which feed is being loaded
+            if (url.equals(currentRoadworksURL)) {
+                statusText.setText("Loading Current Roadworks...");
+            } else {
+                statusText.setText("Loading Unplanned Events...");
+            }
+
+            // Start a new download for the recreated Activity
+            latestDownloadId++;
+            loadingSpinner.setVisibility(View.VISIBLE);
+
+            new Thread(new Task(url,
+                    viewModel.isKeepSearchOnDownload(),
+                    latestDownloadId)).start();
+        }
+
+        // Only check for restoration on the first start
+        restoringAfterRotation = false;
 
 
         // Making sure on rotation the map and its markers are still loaded into the framelayout
@@ -375,6 +414,10 @@ public class MainActivity extends AppCompatActivity
         // Remember which traffic feed the user selected
         viewModel.setSelectedFeedUrl(url);
 
+        // Remember that a manual download has started
+        viewModel.setDownloading(true);
+        viewModel.setKeepSearchOnDownload(false);
+
         // Assign a new number to this download
         latestDownloadId++;
 
@@ -415,6 +458,7 @@ public class MainActivity extends AppCompatActivity
         @Override
         public void run() {
             Log.d("MyTask", "in run");
+
             try {
                 URL url = new URL(myurl);
                 HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
@@ -422,9 +466,17 @@ public class MainActivity extends AppCompatActivity
                 urlConnection.setRequestProperty("Authorization", Base64.getEncoder().encodeToString((clientId + ":" + clientKey).getBytes()));
                 try {
                     in = new BufferedReader(new InputStreamReader(urlConnection.getInputStream()));
+
+                    // Build up the downloaded XML without repeatedly copying the whole String
+                    StringBuilder xmlBuilder = new StringBuilder();
+
                     while ((inputLine = in.readLine()) != null) {
-                        result = result + inputLine;
+                        xmlBuilder.append(inputLine);
                     }
+
+                    // Converting the completed XML into the String used by the parser
+                    result = xmlBuilder.toString();
+
                     in.close();
                 } catch (IOException e) {
                     Log.e("urlConnection", "Could not download traffic data", e);
@@ -504,6 +556,7 @@ public class MainActivity extends AppCompatActivity
 
                         // Stop the spinner because no traffic information could be loaded
                         loadingSpinner.setVisibility(View.GONE);
+                        viewModel.setDownloading(false);
 
                         // Check whether previously downloaded data exists
                         if (allSituations.isEmpty()) {
@@ -579,6 +632,7 @@ public class MainActivity extends AppCompatActivity
 
                         // Hide the spinner now that the information has loaded
                         loadingSpinner.setVisibility(View.GONE);
+                        viewModel.setDownloading(false);
 
                         // Storing the newly downloaded situations
                         allSituations = new ArrayList<>(situations);
@@ -646,6 +700,7 @@ public class MainActivity extends AppCompatActivity
 
                         // Hide the loading symbol because parsing has stopped
                         loadingSpinner.setVisibility(View.GONE);
+                        viewModel.setDownloading(false);
 
                         // Show an error message without removing existing results
                         if (allSituations.isEmpty()) {
@@ -1031,6 +1086,15 @@ public class MainActivity extends AppCompatActivity
 
         // Showing how many markers were created in Logcat
         Log.d("TrafficMap", "Added " + markerCount + " markers");
+    }
+
+    @Override
+    protected void onDestroy() {
+
+        // Ignore download results belonging to the old Activity
+        latestDownloadId++;
+
+        super.onDestroy();
     }
 
     // Called when Activity is no longer visible and stops the automatic data refreshes until Activity starts again
