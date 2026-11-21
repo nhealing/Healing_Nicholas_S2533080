@@ -61,3 +61,5 @@ I used seven icons from Google's Material Symbols to represent different types o
 The icons are used for road or lane management, road obstructions, abnormal traffic and roadworks with different reported delays. I resized the icons to 64 × 64 pixels so they could be displayed clearly in the application.
 
 **Source:** https://fonts.google.com/icons
+
+The Google Material Symbols icons are available under the Apache License 2.0.

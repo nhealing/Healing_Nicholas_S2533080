@@ -6,7 +6,6 @@
 
 package org.me.gcu.healing_nicholas_s2533080;
 
-import android.location.Location;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -95,10 +94,6 @@ public class MainActivity extends AppCompatActivity
     private EditText distanceInput;
     private Button nearbyButton;
 
-    // Fixed coordinates for Glasgow city centre
-    private final double glasgowLatitude = 55.861;
-    private final double glasgowLongitude = -4.252;
-
     //DOWNLOADING FROM TRAFFIC SCOTLAND
     final String clientId = BuildConfig.TRAFFIC_CLIENT_ID;
     final String clientKey = BuildConfig.TRAFFIC_CLIENT_KEY;
@@ -120,7 +115,7 @@ public class MainActivity extends AppCompatActivity
         @Override
         public void run() {
 
-            // Getting the URL for the curreently seleccted feed
+            // Getting the URL for the currently selected feed
             String url = viewModel.getSelectedFeedUrl();
 
             // If the user hasn't chosen a feed then use Unplanned Events
@@ -278,13 +273,13 @@ public class MainActivity extends AppCompatActivity
                     public void onBackStackChanged() {
 
                         // Updating which part of the activity is visible
-                        updateDetailsVisibilty();
+                        updateDetailsVisibility();
                     }
                 }
         );
 
         // Setting the correct visibility when the Activity first opens
-        updateDetailsVisibilty();
+        updateDetailsVisibility();
     }
 
     // Called when Activity becomes visible and restores traffic data from the ViewModel after rotations
@@ -409,7 +404,8 @@ public class MainActivity extends AppCompatActivity
 
     }
 
-    // Starts download of selected Traffic feed and remember the chosen URL + runes Task on background thread
+    // Starts downloading the selected feed on the background thread and remebers the selected URL so that
+    // it can be used for automatic refreshes
     public void startProgress(String url) {
 
         // Remember which traffic feed the user selected
@@ -445,7 +441,7 @@ public class MainActivity extends AppCompatActivity
         private int downloadId;
 
         // Constructor for building Task, I added a boolean to preserve the users search when parsed data is downloaded
-        // such as false - the user manually selected to download traffic events so proivde the full list or true - it was an automatic refresh so maintain the current list that was already loaded
+        // such as false - the user manually selected to download traffic events so provide the full list or true - it was an automatic refresh so maintain the current list that was already loaded
         public Task(String aurl, boolean keepSearch, int id) {
 
             myurl = aurl;
@@ -727,7 +723,7 @@ public class MainActivity extends AppCompatActivity
     }
 
     // Switches between the traffic list and the details/map container
-    private void updateDetailsVisibilty() {
+    private void updateDetailsVisibility() {
 
         FragmentManager manager = getSupportFragmentManager();
 
@@ -809,28 +805,9 @@ public class MainActivity extends AppCompatActivity
         // Clear the previous distance search when searching by road
         distanceInput.setText("");
 
-        // Creating a list to store matching situations
-        ArrayList<Situation> matchingSituations = new ArrayList<>();
-
-        // Looping through/checking each Situation
-        for (Situation situation : allSituations) {
-
-            // Some situations might not contain location data
-            if (situation.getLocation() != null) {
-
-                String roadName = situation.getLocation().getRoadName();
-
-                // Making sure the road name exists before comparing it
-                if (roadName != null) {
-
-                    // Comparing the searched road name with road names in our Situation
-                    if (roadName.toLowerCase().contains(road.toLowerCase())) {
-                        // Adding the matching situations to our results/matchingSituations arrayList
-                        matchingSituations.add(situation);
-                    }
-                }
-            }
-        }
+        // Calling the ViewModel to find situations matching the road entered and storing them in a list
+        ArrayList<Situation> matchingSituations =
+                viewModel.findSituationsByRoad(road);
 
         // Displaying only the situations matching the road name
         showSituations(matchingSituations);
@@ -847,38 +824,6 @@ public class MainActivity extends AppCompatActivity
             statusText.setText(message);
         }
 
-    }
-
-    // Calculates the distance between fixed location (Glasgow City Centre) and a traffic location
-    // Returns true if the location is within the distance that was searched
-    private boolean isWithinDistance(double latitude, double longitude,
-                                     double distanceKm) {
-
-        // Check that the entered coordinates are valid
-        if (latitude < -90 || latitude > 90
-                || longitude < -180 || longitude > 180
-                || (latitude == 0 && longitude == 0)) {
-            return false;
-        }
-
-        // Create a Location object for Glasgow city centre
-        Location glasgow = new Location("fixed");
-        glasgow.setLatitude(glasgowLatitude);
-        glasgow.setLongitude(glasgowLongitude);
-
-        // Create a Location object for the traffic situation
-        Location trafficLocation = new Location("traffic");
-        trafficLocation.setLatitude(latitude);
-        trafficLocation.setLongitude(longitude);
-
-        // Calculating the distance between the two locations in metres using distanceTo method
-        float distanceMetres = glasgow.distanceTo(trafficLocation);
-
-        // Convert from metres in to kilometres
-        double calculatedDistance = distanceMetres / 1000.0;
-
-        // Checking whether the situation is close enough
-        return calculatedDistance <= distanceKm;
     }
 
     // Searches for traffic situations within a distance of Glasgow. Checks from and to coordinates and displays matching results
@@ -917,43 +862,8 @@ public class MainActivity extends AppCompatActivity
         // Clear the previous road search when searching by distance
         roadSearchInput.setText("");
 
-        // Creating an ArrayList to store situations within the distance
-        ArrayList<Situation> nearbySituations = new ArrayList<>();
-
-        // Checking each situation from the loaded traffic dadta
-        for (Situation situation : allSituations) {
-
-            TrafficLocation location = situation.getLocation();
-
-            // Some situations might not have location information
-            if (location != null) {
-
-                boolean nearby = false;
-
-                // Checking the starting coordinates if they exists
-                Double fromLat = location.getFromLatitude();
-                Double fromLon = location.getFromLongitude();
-
-                if (fromLat != null && fromLon != null) {
-
-                    nearby = isWithinDistance(fromLat, fromLon, distanceInKm);
-                }
-
-                // Also checking the ending coordinates
-                Double toLat = location.getToLatitude();
-                Double toLon = location.getToLongitude();
-
-                if (!nearby && toLat != null && toLon != null) {
-
-                    nearby = isWithinDistance(toLat, toLon, distanceInKm);
-                }
-
-                // Adding this Situation if either location is nearby
-                if (nearby) {
-                    nearbySituations.add(situation);
-                }
-            }
-        }
+        // Calling the ViewModel to find situations within the entered distance and saving them in a list
+        ArrayList<Situation> nearbySituations = viewModel.findSituationsWithinDistance(distanceInKm);
 
         // Displaying the situations that matched the distance search
         showSituations(nearbySituations);
