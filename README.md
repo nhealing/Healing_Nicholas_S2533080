@@ -40,10 +40,10 @@ The real keys should not be included in the GitHub repository or the project ZIP
 
 ## How the code is organised
 
-- `MainActivity.java` handles the buttons, searches, downloads, automatic refreshes and updating the screen.
+- `MainActivity.java` handles the buttons, user input, downloads, automatic refreshes, navigation and updating the screen.
 - `TrafficXmlParser.java` uses `XmlPullParser` to read the XML and create `Situation` objects.
 - `TrafficStorage.java` saves downloaded XML and reads it back from internal storage.
-- `TrafficViewModel.java` keeps the traffic data when the screen is rotated.
+- `TrafficViewModel.java` keeps the traffic data when the screen is rotated and handles searching by road name and distance.
 - `Situation.java` and `TrafficLocation.java` store the information from the XML.
 - `SituationAdapter.java` displays the situations in the ListView.
 - `SituationDetailsFragment.java` displays the details of a selected situation.
