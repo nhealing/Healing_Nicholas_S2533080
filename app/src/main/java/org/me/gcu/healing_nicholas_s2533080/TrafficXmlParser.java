@@ -284,8 +284,7 @@ public class TrafficXmlParser {
                             || descriptorType.equalsIgnoreCase("linkName")) {
 
                         // Checking that a name was found and isn't empty
-                        if (tempRoadName != null
-                                && !tempRoadName.trim().isEmpty()) {
+                        if (tempRoadName != null && !tempRoadName.trim().isEmpty()) {
 
                             // Only setting the name if we haven't set one already
                             if (currentSituation.getLocation().getRoadName() == null) {

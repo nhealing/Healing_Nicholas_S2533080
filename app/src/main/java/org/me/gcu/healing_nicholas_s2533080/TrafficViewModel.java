@@ -18,6 +18,9 @@ public class TrafficViewModel extends ViewModel {
     // Remembering whether the current traffic information came from saved XML
     private boolean showingSavedData = false;
 
+    // Remembering when the displayed XML was last downloaded
+    private long savedDataTime = 0;
+
     // Remembering whether a download is running when the screen rotates
     private boolean downloading = false;
 
@@ -79,6 +82,16 @@ public class TrafficViewModel extends ViewModel {
     // Setting whether the data is live or came from internal storage
     public void setShowingSavedData(boolean showingSavedData) {
         this.showingSavedData = showingSavedData;
+    }
+
+    // Return the date and time of the saved XML
+    public long getSavedDataTime() {
+        return savedDataTime;
+    }
+
+    // Remember the date and time of the saved XML
+    public void setSavedDataTime(long time) {
+        savedDataTime = time;
     }
 }
 

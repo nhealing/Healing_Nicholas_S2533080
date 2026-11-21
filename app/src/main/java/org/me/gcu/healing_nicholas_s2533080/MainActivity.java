@@ -20,6 +20,7 @@ import android.widget.FrameLayout;
 import android.widget.ListView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.text.format.DateFormat;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
@@ -467,7 +468,7 @@ public class MainActivity extends AppCompatActivity
                 try {
                     in = new BufferedReader(new InputStreamReader(urlConnection.getInputStream()));
 
-                    // Build up the downloaded XML without repeatedly copying the whole String
+                    // Building up the downloaded XML without repeatedly copying the whole String
                     StringBuilder xmlBuilder = new StringBuilder();
 
                     while ((inputLine = in.readLine()) != null) {
@@ -609,6 +610,9 @@ public class MainActivity extends AppCompatActivity
                 // To remember whether the displayed information came from internal storage
                 final boolean showingSavedData = loadedFromFile;
 
+                // Get the time when this feed's XML file was last downloaded
+                final long savedDataTime = TrafficStorage.getSavedTime(getApplicationContext(), fileName);
+
                 // Update the ListView after the downloaded XML has been parsed
                 // Posts from worker to the main UI making it safe to update widgets here
                 refreshHandler.post(new Runnable() {
@@ -640,6 +644,9 @@ public class MainActivity extends AppCompatActivity
 
                         // Remember whether this traffic data came from saved XML
                         viewModel.setShowingSavedData(showingSavedData);
+
+                        // Remember the date of the saved XML
+                        viewModel.setSavedDataTime(savedDataTime);
 
                         if (preserveSearch) {
 
@@ -738,6 +745,19 @@ public class MainActivity extends AppCompatActivity
         }
     }
 
+    // Formatting the date of the saved traffic information
+    private String getSavedDateText() {
+
+        long savedTime = viewModel.getSavedDataTime();
+
+        if (savedTime == 0) {
+            return "Last downloaded: Unknown";
+        }
+
+        return "Last downloaded: "
+                + DateFormat.format("dd/MM/yyyy HH:mm", savedTime);
+    }
+
     // Displays situations in ListView using custom Adapter. Also saves the displayed list in the ViewModel
     private void showSituations(ArrayList<Situation> situationsToShow) {
 
@@ -758,13 +778,12 @@ public class MainActivity extends AppCompatActivity
         // Display the correct status depending on where the data came from
         if (viewModel.isShowingSavedData()) {
 
-            statusText.setText("Offline - showing " + displayedSituations.size()
-                    + " saved situations (may be out of date)");
+            // Let the user know the information was previously downloaded
+            statusText.setText("Saved data - showing " + displayedSituations.size()
+                    + " situations (may be out of date)\n" + getSavedDateText());
 
         } else {
-
-            statusText.setText("Showing " + displayedSituations.size()
-                    + " situations");
+            statusText.setText("Showing " + displayedSituations.size() + " situations");
         }
 
     }
@@ -822,7 +841,7 @@ public class MainActivity extends AppCompatActivity
             String message = "There were no situations matching " + road;
 
             if (viewModel.isShowingSavedData()) {
-                message = message + " (offline - saved data may be out of date)";
+                message = message + " (using saved data - may be out of date)\n" + getSavedDateText();
             }
 
             statusText.setText(message);
@@ -945,7 +964,7 @@ public class MainActivity extends AppCompatActivity
 
         // Inform the user if the search used saved information
         if (viewModel.isShowingSavedData()) {
-            resultMessage = resultMessage + " (offline - saved data may be out of date)";
+            resultMessage = resultMessage + " (using saved data - may be out of date)\n" + getSavedDateText();
         }
 
         statusText.setText(resultMessage);

@@ -48,4 +48,12 @@ public class TrafficStorage {
             fos.write(xml.getBytes());
         }
     }
+
+    // Get the date and time when the XML file was last saved
+    public static long getSavedTime(Context context, String fileName) {
+
+        File f = new File(context.getFilesDir(), fileName);
+
+        return f.lastModified();
+    }
 }
